@@ -1,0 +1,1486 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Plus,
+  Trash2,
+  Copy,
+  Sparkles,
+  Save,
+  Palette,
+  ZoomIn,
+  ZoomOut,
+  Maximize2,
+  Calendar,
+  Building,
+  Building2,
+  Upload,
+  User,
+  DollarSign,
+  ArrowLeft,
+  CheckCircle2,
+} from "lucide-react";
+import { toast } from "sonner";
+import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
+import { calculateInvoiceTotals, calculateLineTotal } from "@/lib/calculations";
+import { InvoiceRenderer, TEMPLATE_LIST } from "@/components/templates";
+import { ExportMenu } from "@/components/ExportMenu";
+import Link from "next/link";
+import { useQueryClient } from "@tanstack/react-query";
+
+interface InvoiceEditorProps {
+  initialInvoice?: InvoiceData;
+  customers: CustomerData[];
+  businessProfile: any;
+  isNew?: boolean;
+  initialTemplate?: string;
+  initialMode?: string;
+}
+
+export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
+  initialInvoice,
+  customers: initialCustomers,
+  businessProfile,
+  isNew = false,
+  initialTemplate,
+  initialMode,
+}) => {
+  const router = useRouter();
+
+  // Mobile Tab view: 'edit' or 'preview'
+  const [activeTab, setActiveTab] = useState<"edit" | "preview">("edit");
+  const [customers, setCustomers] = useState<CustomerData[]>(initialCustomers || []);
+  const [isSaving, setIsSaving] = useState(false);
+  const [zoomLevel, setZoomLevel] = useState<number>(100);
+
+  // Auto-calculate exact scale to fit mobile or desktop screen width without overflow
+  const handleFitScreen = () => {
+    if (typeof window !== "undefined") {
+      const screenW = window.innerWidth;
+      const availableW = screenW < 1024 ? screenW - 36 : 560;
+      const fit = Math.min(100, Math.max(38, Math.floor((availableW / 760) * 100)));
+      setZoomLevel(fit);
+    }
+  };
+
+  useEffect(() => {
+    handleFitScreen();
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        handleFitScreen();
+      }
+    };
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // AI Modal States
+  const [aiModalOpen, setAiModalOpen] = useState(initialMode === "ai");
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiProgress, setAiProgress] = useState(0);
+  const [aiStepMessage, setAiStepMessage] = useState("Analyzing request...");
+  const [polishingIndex, setPolishingIndex] = useState<number | null>(null);
+
+  const queryClient = useQueryClient();
+
+  // Inline New Customer modal state
+  const [newCustomerModal, setNewCustomerModal] = useState(false);
+  const [newCustName, setNewCustName] = useState("");
+  const [newCustCompany, setNewCustCompany] = useState("");
+  const [newCustEmail, setNewCustEmail] = useState("");
+  const [newCustPhone, setNewCustPhone] = useState("");
+  const [newCustAddress, setNewCustAddress] = useState("");
+  const [newCustTaxNumber, setNewCustTaxNumber] = useState("");
+  const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
+
+  // Master Invoice Form State
+  const [invoice, setInvoice] = useState<InvoiceData>(() => {
+    if (initialInvoice) {
+      return {
+        ...initialInvoice,
+        business: {
+          ...initialInvoice.business,
+          businessName: initialInvoice.business?.businessName || businessProfile?.businessName || "My Business",
+          logoUrl: initialInvoice.business?.logoUrl || businessProfile?.logoUrl || "",
+        },
+      };
+    }
+
+    const defaultCurrency = businessProfile?.defaultCurrency || "USD";
+    const defaultTax = businessProfile?.defaultTaxRate || 0;
+    const defaultTerms = businessProfile?.defaultPaymentTerms || "Net 14 Days";
+    const prefix = businessProfile?.invoicePrefix || "INV-";
+    const nextNum = businessProfile?.nextInvoiceNumber || 1001;
+
+    const defaultItems: InvoiceItemData[] = [
+      {
+        description: "Website Design & Development Services",
+        quantity: 1,
+        unit: "project",
+        unitPrice: 2500,
+        discount: 0,
+        taxRate: defaultTax,
+        lineTotal: 2500,
+        sortOrder: 1,
+      },
+    ];
+
+    const totals = calculateInvoiceTotals(defaultItems, 0, "percentage", defaultTax, 0);
+
+    return {
+      invoiceNumber: `${prefix}${nextNum}`,
+      templateId: (initialTemplate as TemplateId) || businessProfile?.defaultTemplate || "modern",
+      status: "draft",
+      invoiceDate: new Date().toISOString().split("T")[0],
+      dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+      currency: defaultCurrency,
+      subtotal: totals.subtotal,
+      discount: 0,
+      discountType: "percentage",
+      taxRate: defaultTax,
+      taxTotal: totals.taxTotal,
+      total: totals.grandTotal,
+      amountPaid: 0,
+      balanceDue: totals.balanceDue,
+      notes: "Thank you for choosing to partner with us! Please reach out if you have any questions.",
+      paymentTerms: defaultTerms,
+      business: {
+        ...(businessProfile || {}),
+        businessName: businessProfile?.businessName || "My Business",
+        logoUrl: businessProfile?.logoUrl || "",
+        email: businessProfile?.email || "billing@example.com",
+      },
+      customer: customers[0] || null,
+      customerId: customers[0]?.id || "",
+      items: defaultItems,
+    };
+  });
+
+  // Recompute deterministic totals on any item or tax/discount change
+  const recalculate = (
+    items: InvoiceItemData[],
+    discount: number,
+    discountType: "percentage" | "fixed",
+    taxRate: number,
+    amountPaid: number
+  ) => {
+    const updatedItems = items.map((item) => ({
+      ...item,
+      lineTotal: calculateLineTotal(item),
+    }));
+
+    const totals = calculateInvoiceTotals(
+      updatedItems,
+      discount,
+      discountType,
+      taxRate,
+      amountPaid
+    );
+
+    setInvoice((prev) => ({
+      ...prev,
+      items: updatedItems,
+      subtotal: totals.subtotal,
+      taxTotal: totals.taxTotal,
+      total: totals.grandTotal,
+      balanceDue: totals.balanceDue,
+    }));
+  };
+
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleEditorLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Logo file size must be less than 5MB.");
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    const uploadToast = toast.loading("Uploading logo...");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success && data.url) {
+        const newLogoUrl = data.url;
+        setInvoice((prev) => ({
+          ...prev,
+          business: {
+            ...prev.business,
+            logoUrl: newLogoUrl,
+          },
+        }));
+
+        // Persist logo to business profile in database
+        await fetch("/api/business-profile", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...(businessProfile || {}),
+            businessName: invoice.business?.businessName || businessProfile?.businessName || "My Business",
+            logoUrl: newLogoUrl,
+          }),
+        });
+
+        toast.success("Logo uploaded and updated!", { id: uploadToast });
+      } else {
+        toast.error(data.error || "Failed to upload logo", { id: uploadToast });
+      }
+    } catch {
+      toast.error("Upload failed. Please try again.", { id: uploadToast });
+    } finally {
+      setIsUploadingLogo(false);
+    }
+  };
+
+  const handleEditorRemoveLogo = async () => {
+    setInvoice((prev) => ({
+      ...prev,
+      business: {
+        ...prev.business,
+        logoUrl: "",
+      },
+    }));
+
+    try {
+      await fetch("/api/business-profile", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(businessProfile || {}),
+          logoUrl: "",
+        }),
+      });
+      toast.success("Logo removed");
+    } catch {
+      // Ignored
+    }
+  };
+
+  // Item handlers
+  const handleItemChange = (index: number, field: keyof InvoiceItemData, value: any) => {
+    const newItems = [...invoice.items];
+    newItems[index] = {
+      ...newItems[index],
+      [field]: value,
+    };
+    recalculate(
+      newItems,
+      invoice.discount,
+      invoice.discountType,
+      invoice.taxRate,
+      invoice.amountPaid
+    );
+  };
+
+  const addItem = () => {
+    const newItem: InvoiceItemData = {
+      description: "",
+      quantity: 1,
+      unit: "hrs",
+      unitPrice: 0,
+      discount: 0,
+      taxRate: invoice.taxRate,
+      lineTotal: 0,
+      sortOrder: invoice.items.length + 1,
+    };
+    const newItems = [...invoice.items, newItem];
+    recalculate(
+      newItems,
+      invoice.discount,
+      invoice.discountType,
+      invoice.taxRate,
+      invoice.amountPaid
+    );
+  };
+
+  const removeItem = (index: number) => {
+    if (invoice.items.length <= 1) {
+      toast.error("Invoice must have at least one line item.");
+      return;
+    }
+    const newItems = invoice.items.filter((_, i) => i !== index);
+    recalculate(
+      newItems,
+      invoice.discount,
+      invoice.discountType,
+      invoice.taxRate,
+      invoice.amountPaid
+    );
+  };
+
+  const duplicateItem = (index: number) => {
+    const itemToDup = invoice.items[index];
+    const duplicated: InvoiceItemData = {
+      ...itemToDup,
+      id: undefined,
+      description: `${itemToDup.description} (Copy)`,
+    };
+    const newItems = [
+      ...invoice.items.slice(0, index + 1),
+      duplicated,
+      ...invoice.items.slice(index + 1),
+    ];
+    recalculate(
+      newItems,
+      invoice.discount,
+      invoice.discountType,
+      invoice.taxRate,
+      invoice.amountPaid
+    );
+  };
+
+  // Polish item description via AI
+  const handlePolishDescription = async (index: number) => {
+    const current = invoice.items[index]?.description;
+    if (!current || current.trim().length < 3) {
+      toast.error("Please enter a short description to improve.");
+      return;
+    }
+
+    setPolishingIndex(index);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "improve-description",
+          description: current,
+        }),
+      });
+      const data = await res.json();
+      if (data.improved) {
+        handleItemChange(index, "description", data.improved);
+        toast.success("Description enhanced with AI!");
+      }
+    } catch {
+      toast.error("Could not enhance description.");
+    } finally {
+      setPolishingIndex(null);
+    }
+  };
+
+  // AI Prompt-to-Invoice Generation
+  const handleGenerateWithAI = async () => {
+    if (!aiPrompt.trim()) {
+      toast.error("Please enter an invoice description.");
+      return;
+    }
+
+    setAiLoading(true);
+    setAiProgress(18);
+    setAiStepMessage("Analyzing natural language specifications...");
+
+    // Staged progress ticker to keep user informed and engaged
+    const stages = [
+      { progress: 38, message: "Extracting client deliverables & line items..." },
+      { progress: 64, message: "Structuring quantities, pricing & unit rates..." },
+      { progress: 86, message: "Validating tax calculations & financial arithmetic..." },
+      { progress: 95, message: "Composing structured invoice document..." },
+    ];
+
+    let currentStep = 0;
+    const progressTimer = setInterval(() => {
+      if (currentStep < stages.length) {
+        setAiProgress(stages[currentStep].progress);
+        setAiStepMessage(stages[currentStep].message);
+        currentStep++;
+      }
+    }, 700);
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "parse-prompt",
+          prompt: aiPrompt,
+          currency: invoice.currency,
+        }),
+      });
+      const result = await res.json();
+      clearInterval(progressTimer);
+
+      if (result.success && result.data) {
+        setAiProgress(100);
+        setAiStepMessage("Invoice synthesized successfully!");
+
+        const parsed = result.data;
+
+        // Auto customer creation or selection
+        let matchedCust = result.customer || customers.find(
+          (c) => c.name.toLowerCase() === (parsed.customerName || "").toLowerCase()
+        );
+
+        if (result.customer) {
+          matchedCust = result.customer;
+          setCustomers((prev) => [
+            result.customer,
+            ...prev.filter((c) => c.id !== result.customer.id),
+          ]);
+          try {
+            queryClient.invalidateQueries({ queryKey: ["customers"] });
+          } catch {}
+        } else if (!matchedCust && parsed.customerName) {
+          matchedCust = {
+            id: "",
+            name: parsed.customerName,
+            email: parsed.customerEmail || "",
+            address: parsed.customerAddress || "",
+          };
+        }
+
+        const newItems: InvoiceItemData[] = (parsed.items || []).map(
+          (item: any, i: number) => ({
+            description: item.description,
+            quantity: item.quantity || 1,
+            unit: item.unit || "unit",
+            unitPrice: item.unitPrice || 0,
+            discount: 0,
+            taxRate: parsed.taxRate || 0,
+            lineTotal: (item.quantity || 1) * (item.unitPrice || 0),
+            sortOrder: i + 1,
+          })
+        );
+
+        const newTaxRate = parsed.taxRate || invoice.taxRate;
+        const newDiscount = parsed.discount || invoice.discount;
+
+        setInvoice((prev) => ({
+          ...prev,
+          currency: parsed.currency || prev.currency,
+          taxRate: newTaxRate,
+          discount: newDiscount,
+          customer: matchedCust || prev.customer,
+          customerId: matchedCust?.id || prev.customerId,
+          notes: parsed.notes || prev.notes,
+          paymentTerms: parsed.paymentTerms || prev.paymentTerms,
+        }));
+
+        recalculate(newItems, newDiscount, invoice.discountType, newTaxRate, invoice.amountPaid);
+
+        setTimeout(() => {
+          toast.success("AI generated invoice details! Review before saving.");
+          setAiModalOpen(false);
+          setAiPrompt("");
+          setAiLoading(false);
+          setAiProgress(0);
+        }, 500);
+      } else {
+        toast.error("Could not parse invoice prompt.");
+        setAiLoading(false);
+        setAiProgress(0);
+      }
+    } catch (e) {
+      clearInterval(progressTimer);
+      toast.error("AI service error.");
+      setAiLoading(false);
+      setAiProgress(0);
+    }
+  };
+
+  // Inline Customer Creation directly inside Invoice Editor
+  const handleCreateCustomerInline = async () => {
+    if (!newCustName.trim()) {
+      toast.error("Customer name is required");
+      return;
+    }
+
+    setIsCreatingCustomer(true);
+    const createToast = toast.loading("Saving customer...");
+
+    try {
+      const res = await fetch("/api/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: newCustName.trim(),
+          companyName: newCustCompany.trim() || undefined,
+          email: newCustEmail.trim() || undefined,
+          phone: newCustPhone.trim() || undefined,
+          address: newCustAddress.trim() || undefined,
+          taxNumber: newCustTaxNumber.trim() || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (data.customer) {
+        setCustomers((prev) => [data.customer, ...prev.filter((c) => c.id !== data.customer.id)]);
+        setInvoice((prev) => ({
+          ...prev,
+          customer: data.customer,
+          customerId: data.customer.id,
+        }));
+        setNewCustomerModal(false);
+        setNewCustName("");
+        setNewCustCompany("");
+        setNewCustEmail("");
+        setNewCustPhone("");
+        setNewCustAddress("");
+        setNewCustTaxNumber("");
+        try {
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
+        } catch {}
+        toast.success(`Customer "${data.customer.name}" created and selected!`, { id: createToast });
+      } else {
+        toast.error(data.error || "Failed to create customer", { id: createToast });
+      }
+    } catch {
+      toast.error("Failed to add customer", { id: createToast });
+    } finally {
+      setIsCreatingCustomer(false);
+    }
+  };
+
+  // Save invoice persistently via API
+  const handleSaveInvoice = async (statusOverride?: string) => {
+    if (!invoice.invoiceNumber?.trim()) {
+      toast.error("Invoice number is required");
+      return;
+    }
+
+    setIsSaving(true);
+    const saveToast = toast.loading("Saving invoice...");
+
+    try {
+      const url = initialInvoice?.id ? `/api/invoices/${initialInvoice.id}` : "/api/invoices";
+      const method = initialInvoice?.id ? "PUT" : "POST";
+
+      const payload = {
+        ...invoice,
+        status: statusOverride || invoice.status,
+      };
+
+      const res = await fetch(url, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success("Invoice saved successfully!", { id: saveToast });
+        router.push("/invoices");
+        router.refresh();
+      } else {
+        toast.error(data.error || "Failed to save invoice", { id: saveToast });
+      }
+    } catch {
+      toast.error("Failed to save invoice", { id: saveToast });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-col gap-6">
+      {/* Top Action Toolbar */}
+      <div className="flex flex-col gap-3 bg-white p-3.5 sm:p-4 rounded-xl border border-[#E8E8E5] shadow-subtle">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <Link
+              href="/invoices"
+              className="p-1.5 sm:p-2 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors shrink-0"
+              title="Back to invoices"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Link>
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-base font-serif font-bold text-[#202124] truncate">
+                {isNew ? "Create Invoice" : `Edit ${invoice.invoiceNumber}`}
+              </h2>
+              <p className="text-[11px] text-[#70757A] truncate hidden xs:block">
+                Real-time synchronization & automatic calculations
+              </p>
+            </div>
+          </div>
+
+          {/* Mobile View Toggle Pills */}
+          <div className="flex lg:hidden bg-[#FAFAF8] p-1 rounded-lg border border-[#E8E8E5] shrink-0">
+            <button
+              onClick={() => setActiveTab("edit")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                activeTab === "edit"
+                  ? "bg-white text-[#4468E8] shadow-2xs font-semibold"
+                  : "text-[#70757A]"
+              }`}
+            >
+              Form
+            </button>
+            <button
+              onClick={() => setActiveTab("preview")}
+              className={`px-3 py-1 rounded-md text-xs font-medium transition-all ${
+                activeTab === "preview"
+                  ? "bg-white text-[#4468E8] shadow-2xs font-semibold"
+                  : "text-[#70757A]"
+              }`}
+            >
+              Preview
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons: 3-column grid on mobile, inline-flex on sm+ screens */}
+        <div className="grid grid-cols-3 sm:flex items-center gap-2 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
+          <button
+            type="button"
+            onClick={() => setAiModalOpen(true)}
+            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-medium text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+          >
+            <Sparkles className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">AI Studio</span>
+          </button>
+
+          <ExportMenu invoice={invoice} elementId="invoice-preview-document" className="w-full sm:w-auto" />
+
+          <button
+            type="button"
+            onClick={() => handleSaveInvoice("sent")}
+            disabled={isSaving}
+            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
+          >
+            <Save className="w-3.5 h-3.5 shrink-0" />
+            <span className="truncate">{isSaving ? "Saving..." : "Save"}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Split Layout: Left Form / Right Preview */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Left Column: Form Editor */}
+        <div
+          className={`lg:col-span-6 space-y-6 ${
+            activeTab === "preview" ? "hidden lg:block" : "block"
+          }`}
+        >
+          {/* 0. Business Branding & Logo Card */}
+          <div className="bg-white p-5 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-3">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F0F0EE]">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] flex items-center gap-2">
+                <Building2 className="w-3.5 h-3.5 text-[#4468E8]" />
+                Company Branding & Logo
+              </h3>
+              <Link
+                href="/business"
+                className="text-[11px] text-[#4468E8] hover:underline font-medium"
+              >
+                Edit Full Profile
+              </Link>
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                {invoice.business?.logoUrl ? (
+                  <div className="h-12 w-16 bg-[#FAFAF8] border border-[#E8E8E5] rounded-lg p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
+                    <img
+                      src={invoice.business.logoUrl}
+                      alt={invoice.business?.businessName || "Company Logo"}
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-12 w-16 bg-[#FAFAF8] border border-dashed border-[#D1D5DB] rounded-lg flex items-center justify-center shrink-0 text-[#9CA3AF]">
+                    <Upload className="w-5 h-5 opacity-60" />
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <p className="font-semibold text-xs text-[#202124] truncate">
+                    {invoice.business?.businessName || "My Business"}
+                  </p>
+                  <p className="text-[11px] text-[#70757A] truncate">
+                    {invoice.business?.email || "No email configured"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors">
+                  <Upload className="w-3 h-3 text-[#4468E8]" />
+                  <span>{invoice.business?.logoUrl ? "Change Logo" : "Upload Logo"}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleEditorLogoUpload}
+                    disabled={isUploadingLogo}
+                    className="hidden"
+                  />
+                </label>
+                {invoice.business?.logoUrl && (
+                  <button
+                    type="button"
+                    onClick={handleEditorRemoveLogo}
+                    className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Remove Logo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* 1. General Invoice Metadata Card */}
+          <div className="bg-white p-6 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] flex items-center gap-2 pb-2 border-b border-[#F0F0EE]">
+              <Calendar className="w-3.5 h-3.5 text-[#4468E8]" />
+              Invoice Specifications
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Invoice Number <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={invoice.invoiceNumber}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, invoiceNumber: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 focus:border-[#4468E8] font-mono"
+                  placeholder="INV-1001"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Currency
+                </label>
+                <select
+                  value={invoice.currency}
+                  onChange={(e) => {
+                    const c = e.target.value;
+                    setInvoice({ ...invoice, currency: c });
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white"
+                >
+                  <option value="USD">USD ($) — US Dollar</option>
+                  <option value="EUR">EUR (€) — Euro</option>
+                  <option value="GBP">GBP (£) — British Pound</option>
+                  <option value="CAD">CAD ($) — Canadian Dollar</option>
+                  <option value="AUD">AUD ($) — Australian Dollar</option>
+                  <option value="PKR">PKR (Rs) — Pakistani Rupee</option>
+                  <option value="INR">INR (₹) — Indian Rupee</option>
+                  <option value="AED">AED — UAE Dirham</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Invoice Date
+                </label>
+                <input
+                  type="date"
+                  value={invoice.invoiceDate?.split("T")[0]}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, invoiceDate: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="date"
+                  value={invoice.dueDate?.split("T")[0]}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, dueDate: e.target.value })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Status
+                </label>
+                <select
+                  value={invoice.status}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, status: e.target.value as any })
+                  }
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white capitalize"
+                >
+                  <option value="draft">Draft</option>
+                  <option value="sent">Sent</option>
+                  <option value="paid">Paid</option>
+                  <option value="partially_paid">Partially Paid</option>
+                  <option value="overdue">Overdue</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Payment Terms
+                </label>
+                <input
+                  type="text"
+                  value={invoice.paymentTerms || ""}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, paymentTerms: e.target.value })
+                  }
+                  placeholder="Net 14 Days"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Customer Selection Card */}
+          <div className="bg-white p-6 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#F0F0EE]">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] flex items-center gap-2">
+                <User className="w-3.5 h-3.5 text-[#4468E8]" />
+                Customer Information
+              </h3>
+              <button
+                type="button"
+                onClick={() => setNewCustomerModal(true)}
+                className="text-xs text-[#4468E8] font-medium hover:underline flex items-center gap-1"
+              >
+                <Plus className="w-3 h-3" /> Add New
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#202124] mb-1">
+                Customer <span className="text-red-500">*</span>
+              </label>
+              <div className="flex gap-2 items-center">
+                <select
+                  value={invoice.customerId || ""}
+                  onChange={(e) => {
+                    const cust = customers.find((c) => c.id === e.target.value);
+                    setInvoice({
+                      ...invoice,
+                      customerId: e.target.value,
+                      customer: cust || null,
+                    });
+                  }}
+                  className="flex-1 px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white"
+                >
+                  <option value="">-- Choose existing customer --</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} {c.companyName ? `(${c.companyName})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setNewCustomerModal(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shrink-0 shadow-xs transition-colors"
+                  title="Directly create and select a new customer"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>New Customer</span>
+                </button>
+              </div>
+            </div>
+
+            {invoice.customer && (
+              <div className="p-3 bg-[#FAFAF8] rounded-lg border border-[#E8E8E5] text-xs space-y-1">
+                <div className="font-semibold text-[#202124]">{invoice.customer.name}</div>
+                {invoice.customer.companyName && (
+                  <div className="text-[#70757A]">{invoice.customer.companyName}</div>
+                )}
+                {invoice.customer.email && (
+                  <div className="text-[#70757A]">{invoice.customer.email}</div>
+                )}
+                {invoice.customer.address && (
+                  <div className="text-[#70757A] whitespace-pre-line">
+                    {invoice.customer.address}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Line Items Card */}
+          <div className="bg-white p-6 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-[#F0F0EE]">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] flex items-center gap-2">
+                <DollarSign className="w-3.5 h-3.5 text-[#4468E8]" />
+                Products & Services
+              </h3>
+              <button
+                type="button"
+                onClick={addItem}
+                className="text-xs font-medium text-[#4468E8] hover:text-[#3455D1] flex items-center gap-1 bg-[#EEF2FF] px-2.5 py-1 rounded-md"
+              >
+                <Plus className="w-3 h-3" /> Add Item
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {invoice.items.map((item, index) => (
+                <div
+                  key={index}
+                  className="p-3.5 rounded-lg border border-[#E8E8E5] bg-[#FAFAF8] space-y-2.5 relative group"
+                >
+                  <div className="flex justify-between items-center gap-2">
+                    <div className="flex-1 flex items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold text-[#70757A] w-5">
+                        #{index + 1}
+                      </span>
+                      <input
+                        type="text"
+                        value={item.description}
+                        onChange={(e) =>
+                          handleItemChange(index, "description", e.target.value)
+                        }
+                        placeholder="Description of work, service, or deliverable..."
+                        className="flex-1 px-3 py-1.5 text-xs bg-white rounded-md border border-[#E8E8E5] focus:outline-none focus:ring-1 focus:ring-[#4468E8]"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handlePolishDescription(index)}
+                        disabled={polishingIndex === index}
+                        title="Improve description with AI"
+                        className="p-1.5 text-[#4468E8] hover:bg-white rounded-md border border-transparent hover:border-blue-200 transition-colors shrink-0"
+                      >
+                        <Sparkles
+                          className={`w-3.5 h-3.5 ${
+                            polishingIndex === index ? "animate-spin" : ""
+                          }`}
+                        />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => duplicateItem(index)}
+                        title="Duplicate item"
+                        className="p-1 text-[#70757A] hover:text-[#202124] hover:bg-white rounded"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeItem(index)}
+                        title="Remove item"
+                        className="p-1 text-[#70757A] hover:text-red-600 hover:bg-white rounded"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Quantity, Unit, Rate, Discount, Line Total */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1 text-xs">
+                    <div>
+                      <label className="text-[10px] text-[#70757A] block">Qty</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={item.quantity}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "quantity",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="w-full px-2 py-1 bg-white rounded border border-[#E8E8E5] font-mono text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-[#70757A] block">Unit</label>
+                      <input
+                        type="text"
+                        value={item.unit || ""}
+                        onChange={(e) =>
+                          handleItemChange(index, "unit", e.target.value)
+                        }
+                        placeholder="hrs / unit"
+                        className="w-full px-2 py-1 bg-white rounded border border-[#E8E8E5] text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-[#70757A] block">Unit Price</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={item.unitPrice}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "unitPrice",
+                            parseFloat(e.target.value) || 0
+                          )
+                        }
+                        className="w-full px-2 py-1 bg-white rounded border border-[#E8E8E5] font-mono text-xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] text-[#70757A] block text-right">
+                        Line Total
+                      </label>
+                      <div className="px-2 py-1 font-mono text-xs font-semibold text-[#202124] text-right">
+                        {invoice.currency} {item.lineTotal.toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* 4. Financial Adjustments & Notes */}
+          <div className="bg-white p-6 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-4">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] pb-2 border-b border-[#F0F0EE]">
+              Tax, Discounts & Notes
+            </h3>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Tax Rate (%)
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  value={invoice.taxRate}
+                  onChange={(e) => {
+                    const rate = parseFloat(e.target.value) || 0;
+                    setInvoice({ ...invoice, taxRate: rate });
+                    recalculate(
+                      invoice.items,
+                      invoice.discount,
+                      invoice.discountType,
+                      rate,
+                      invoice.amountPaid
+                    );
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Discount
+                </label>
+                <div className="flex gap-1">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={invoice.discount}
+                    onChange={(e) => {
+                      const disc = parseFloat(e.target.value) || 0;
+                      setInvoice({ ...invoice, discount: disc });
+                      recalculate(
+                        invoice.items,
+                        disc,
+                        invoice.discountType,
+                        invoice.taxRate,
+                        invoice.amountPaid
+                      );
+                    }}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] font-mono"
+                  />
+                  <select
+                    value={invoice.discountType}
+                    onChange={(e) => {
+                      const dt = e.target.value as "percentage" | "fixed";
+                      setInvoice({ ...invoice, discountType: dt });
+                      recalculate(
+                        invoice.items,
+                        invoice.discount,
+                        dt,
+                        invoice.taxRate,
+                        invoice.amountPaid
+                      );
+                    }}
+                    className="px-2 py-2 text-xs rounded-lg border border-[#E8E8E5] bg-white"
+                  >
+                    <option value="percentage">%</option>
+                    <option value="fixed">{invoice.currency}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Amount Paid
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={invoice.amountPaid}
+                  onChange={(e) => {
+                    const paid = parseFloat(e.target.value) || 0;
+                    setInvoice({ ...invoice, amountPaid: paid });
+                    recalculate(
+                      invoice.items,
+                      invoice.discount,
+                      invoice.discountType,
+                      invoice.taxRate,
+                      paid
+                    );
+                  }}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] font-mono"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-[#202124] mb-1">
+                Client Notes & Payment Instructions
+              </label>
+              <textarea
+                rows={3}
+                value={invoice.notes || ""}
+                onChange={(e) => setInvoice({ ...invoice, notes: e.target.value })}
+                className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+                placeholder="Thank you for your business..."
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Right Column: Live Invoice Preview */}
+        <div
+          className={`lg:col-span-6 space-y-4 ${
+            activeTab === "edit" ? "hidden lg:block" : "block"
+          }`}
+        >
+          {/* Template Selector & Zoom Bar */}
+          <div className="bg-white p-3.5 rounded-xl border border-[#E8E8E5] shadow-subtle flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <Palette className="w-4 h-4 text-[#4468E8]" />
+              <span className="text-xs font-medium text-[#202124]">Template:</span>
+              <select
+                value={invoice.templateId}
+                onChange={(e) =>
+                  setInvoice({ ...invoice, templateId: e.target.value as TemplateId })
+                }
+                className="px-2.5 py-1 text-xs font-medium rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-1 focus:ring-[#4468E8]"
+              >
+                {TEMPLATE_LIST.map((tpl) => (
+                  <option key={tpl.slug} value={tpl.slug}>
+                    {tpl.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Zoom Controls */}
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.max(35, z - 10))}
+                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                title="Zoom Out"
+              >
+                <ZoomOut className="w-3.5 h-3.5" />
+              </button>
+              <span className="text-[11px] font-mono font-medium text-[#70757A] w-9 text-center">
+                {zoomLevel}%
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
+                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                title="Zoom In"
+              >
+                <ZoomIn className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={handleFitScreen}
+                className="px-2 py-1 text-[11px] font-medium text-[#4468E8] hover:bg-[#EEF2FF] rounded transition-colors"
+                title="Fit to Screen"
+              >
+                Fit
+              </button>
+              <button
+                type="button"
+                onClick={() => setZoomLevel(100)}
+                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                title="100% Size"
+              >
+                <Maximize2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Sticky Document Wrapper */}
+          <div className="lg:sticky lg:top-24 overflow-x-auto pb-12 w-full">
+            <div
+              style={{
+                width: `${760 * (zoomLevel / 100)}px`,
+                minHeight: `${980 * (zoomLevel / 100)}px`,
+              }}
+              className="mx-auto relative transition-all duration-150"
+            >
+              <div
+                style={{
+                  transform: `scale(${zoomLevel / 100})`,
+                  transformOrigin: "top left",
+                  width: "760px",
+                }}
+                className="shadow-invoice rounded-lg overflow-hidden border border-[#E8E8E5] bg-white origin-top-left"
+              >
+                {/* Document Element targeted by PDF and PNG exporter */}
+                <div id="invoice-preview-document" className="w-[760px] bg-white">
+                  <InvoiceRenderer invoice={invoice} templateId={invoice.templateId} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Prompt Modal */}
+      {aiModalOpen && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-elevated border border-[#E8E8E5] space-y-4 animate-in fade-in zoom-in-95">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#EEF2FF] flex items-center justify-center text-[#4468E8]">
+                <Sparkles className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-serif font-bold text-base text-[#202124]">
+                  Create Invoice with Buno AI
+                </h3>
+                <p className="text-xs text-[#70757A]">
+                  Type your invoice requirements naturally in plain English
+                </p>
+              </div>
+            </div>
+
+            {aiLoading ? (
+              <div className="py-3 space-y-4">
+                {/* Real-time Staged Progress Bar */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="flex items-center gap-2 font-medium text-[#202124]">
+                      <span className="relative flex h-2.5 w-2.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#4468E8] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#4468E8]"></span>
+                      </span>
+                      {aiStepMessage}
+                    </span>
+                    <span className="font-mono font-bold text-[#4468E8]">{aiProgress}%</span>
+                  </div>
+                  <div className="w-full bg-[#EEF2FF] h-2.5 rounded-full overflow-hidden p-0.5 border border-blue-100">
+                    <div
+                      className="bg-gradient-to-r from-[#4468E8] via-[#5B7BF8] to-[#34D399] h-full rounded-full transition-all duration-500 ease-out shadow-xs"
+                      style={{ width: `${aiProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Engaging Multi-Step Checklist */}
+                <div className="bg-[#FAFAF8] rounded-xl p-3.5 border border-[#E8E8E5] space-y-2 text-xs">
+                  <div className={`flex items-center gap-2.5 transition-colors ${aiProgress >= 30 ? "text-emerald-700 font-medium" : "text-[#70757A]"}`}>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${aiProgress >= 30 ? "text-emerald-600" : "text-[#CBD5E1]"}`} />
+                    <span>Analyzing deliverables & customer details</span>
+                  </div>
+                  <div className={`flex items-center gap-2.5 transition-colors ${aiProgress >= 60 ? "text-emerald-700 font-medium" : "text-[#70757A]"}`}>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${aiProgress >= 60 ? "text-emerald-600" : "text-[#CBD5E1]"}`} />
+                    <span>Extracting line items, itemized quantities & rates</span>
+                  </div>
+                  <div className={`flex items-center gap-2.5 transition-colors ${aiProgress >= 85 ? "text-emerald-700 font-medium" : "text-[#70757A]"}`}>
+                    <CheckCircle2 className={`w-3.5 h-3.5 ${aiProgress >= 85 ? "text-emerald-600" : "text-[#CBD5E1]"}`} />
+                    <span>Calculating deterministic financial totals & tax rates</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <textarea
+                  rows={4}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="Example: Create an invoice for Apex Labs. 3 landing pages at $1,200 each and brand identity guide at $800. Apply 8% tax. Due in 15 days."
+                  className="w-full p-3 text-xs rounded-xl border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+                />
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setAiModalOpen(false)}
+                disabled={aiLoading}
+                className="px-4 py-2 text-xs font-medium text-[#70757A] hover:bg-[#F5F5F3] rounded-lg disabled:opacity-40"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleGenerateWithAI}
+                disabled={aiLoading}
+                className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg disabled:opacity-50"
+              >
+                {aiLoading ? (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                    <span>Generating ({aiProgress}%)...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5" />
+                    <span>Generate Invoice</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inline New Customer Modal */}
+      {newCustomerModal && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-elevated border border-[#E8E8E5] space-y-4 animate-in fade-in">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F0F0EE]">
+              <div>
+                <h3 className="font-serif font-bold text-base text-[#202124]">
+                  Add New Customer
+                </h3>
+                <p className="text-[11px] text-[#70757A]">
+                  Saved permanently to your account and selected for this invoice.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setNewCustomerModal(false)}
+                className="text-[#70757A] hover:text-[#202124] text-xs p-1 rounded-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#202124] mb-1">
+                    Customer Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustName}
+                    onChange={(e) => setNewCustName(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none"
+                    placeholder="e.g. Elena Rostova"
+                    autoFocus
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#202124] mb-1">
+                    Company Name
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustCompany}
+                    onChange={(e) => setNewCustCompany(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none"
+                    placeholder="e.g. Acme Studio"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-[#202124] mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={newCustEmail}
+                    onChange={(e) => setNewCustEmail(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none"
+                    placeholder="billing@client.com"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-[#202124] mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={newCustPhone}
+                    onChange={(e) => setNewCustPhone(e.target.value)}
+                    className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none"
+                    placeholder="+1 (555) 019-2834"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Billing Address
+                </label>
+                <textarea
+                  rows={2}
+                  value={newCustAddress}
+                  onChange={(e) => setNewCustAddress(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none resize-none"
+                  placeholder="Street address, City, State/Province, ZIP, Country"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-[#202124] mb-1">
+                  Tax Number / VAT ID
+                </label>
+                <input
+                  type="text"
+                  value={newCustTaxNumber}
+                  onChange={(e) => setNewCustTaxNumber(e.target.value)}
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:ring-2 focus:ring-[#4468E8]/20 focus:outline-none"
+                  placeholder="e.g. US-94-118290"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#F0F0EE]">
+              <button
+                type="button"
+                onClick={() => setNewCustomerModal(false)}
+                disabled={isCreatingCustomer}
+                className="px-4 py-2 text-xs font-medium text-[#70757A] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateCustomerInline}
+                disabled={isCreatingCustomer}
+                className="px-4 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-xs transition-colors disabled:opacity-50"
+              >
+                {isCreatingCustomer ? "Saving Customer..." : "Create & Select Customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
