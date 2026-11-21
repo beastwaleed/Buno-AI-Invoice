@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Sparkles, ArrowRight, Lock, Mail, ShieldCheck } from "lucide-react";
+import { Lock, Mail, ArrowRight } from "lucide-react";
 import { BunoLogo } from "@/components/ui/BunoLogo";
 
 export default function LoginPage() {
@@ -30,34 +30,10 @@ export default function LoginPage() {
         router.push("/dashboard");
         router.refresh();
       } else {
-        toast.error(data.error || "Login failed", { id: tId });
+        toast.error(data.error || "Invalid email or password", { id: tId });
       }
     } catch {
       toast.error("An error occurred during login", { id: tId });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setIsLoading(true);
-    const tId = toast.loading("Launching demo account...");
-    try {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "demo" }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        toast.success("Signed in as Demo User (Alexander Wright)!", { id: tId });
-        router.push("/dashboard");
-        router.refresh();
-      } else {
-        toast.error("Failed to load demo account", { id: tId });
-      }
-    } catch {
-      toast.error("Demo login error", { id: tId });
     } finally {
       setIsLoading(false);
     }
@@ -79,27 +55,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* 1-Click Demo Login Banner */}
-        <div className="bg-[#EEF2FF] border border-blue-200/80 rounded-2xl p-4 text-center space-y-2.5">
-          <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-[#4468E8]">
-            <Sparkles className="w-4 h-4" />
-            <span>Instant Reviewer / Evaluator Access</span>
-          </div>
-          <p className="text-[11px] text-[#475569]">
-            Pre-loaded with Alexander Wright&apos;s design studio, 3 clients, 4 invoices, and full database persistence.
-          </p>
-          <button
-            type="button"
-            onClick={handleDemoLogin}
-            disabled={isLoading}
-            className="w-full py-2 px-3 bg-[#4468E8] hover:bg-[#3455D1] text-white text-xs font-semibold rounded-xl shadow-2xs transition-all flex items-center justify-center gap-2"
-          >
-            <span>One-Click Demo Sign In</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {/* Traditional Credentials Form */}
+        {/* Credentials Form */}
         <div className="bg-white p-6 rounded-2xl border border-[#E8E8E5] shadow-subtle space-y-4">
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>
@@ -113,7 +69,7 @@ export default function LoginPage() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="alexander@company.com"
+                  placeholder="you@company.com"
                   className="w-full pl-9 pr-3 py-2 rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
                 />
               </div>
@@ -122,9 +78,6 @@ export default function LoginPage() {
             <div>
               <div className="flex justify-between items-center mb-1">
                 <label className="font-medium text-[#202124]">Password</label>
-                <span className="text-[10px] text-[#70757A]">
-                  Demo: password123
-                </span>
               </div>
               <div className="relative">
                 <Lock className="w-4 h-4 text-[#70757A] absolute left-3 top-2.5" />
@@ -142,9 +95,10 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-[#202124] hover:bg-black text-white text-xs font-medium rounded-xl shadow-xs transition-all disabled:opacity-50"
+              className="w-full py-2.5 px-4 bg-[#202124] hover:bg-black text-white text-xs font-medium rounded-xl shadow-xs transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {isLoading ? "Signing in..." : "Sign In with Email"}
+              <span>{isLoading ? "Signing in..." : "Sign In"}</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
 

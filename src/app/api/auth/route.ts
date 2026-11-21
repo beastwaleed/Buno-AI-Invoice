@@ -28,18 +28,6 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { action, email, password, name } = body;
 
-    if (action === "demo") {
-      // Auto-sign in as demo user
-      const demoUser = await prisma.user.findFirst({
-        where: { email: "demo@buno.app" },
-      });
-      if (!demoUser) {
-        return NextResponse.json({ error: "Demo user not found. Run db seed." }, { status: 404 });
-      }
-      await setSessionCookie(demoUser.id);
-      return NextResponse.json({ success: true, user: demoUser });
-    }
-
     if (action === "logout") {
       await clearSessionCookie();
       return NextResponse.json({ success: true });

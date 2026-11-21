@@ -86,7 +86,7 @@ export default function LandingPage() {
             href="/auth/login"
             className="w-full sm:w-auto px-6 py-3.5 text-sm font-semibold text-[#202124] bg-white border border-[#E8E8E5] hover:bg-[#F5F5F3] rounded-xl shadow-subtle transition-all"
           >
-            Instant Demo Access
+            Sign In to Account
           </Link>
         </div>
 

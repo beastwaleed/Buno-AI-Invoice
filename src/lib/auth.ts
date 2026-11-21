@@ -47,13 +47,5 @@ export async function getCurrentUser() {
     if (user) return user;
   }
 
-  // Fallback to primary account for frictionless immediate review if session cookie is absent
-  const demoUser = await prisma.user.findFirst({
-    include: {
-      profile: true,
-      settings: true,
-    },
-  });
-
-  return demoUser;
+  return null;
 }
