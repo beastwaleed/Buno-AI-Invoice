@@ -1,5 +1,6 @@
 import React from "react";
 import { getCurrentUser } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import Link from "next/link";
@@ -7,11 +8,9 @@ import {
   User,
   Building2,
   Palette,
-  FileCheck,
-  Shield,
-  Key,
   ExternalLink,
 } from "lucide-react";
+import { SettingsPreferencesClient } from "@/components/settings/SettingsPreferencesClient";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +19,17 @@ export default async function SettingsPage() {
   if (!user) {
     redirect("/auth/login");
   }
+
+  const [settings, profile] = await Promise.all([
+    prisma.userSettings.findUnique({
+      where: { userId: user.id },
+    }),
+    prisma.businessProfile.findUnique({
+      where: { userId: user.id },
+    }),
+  ]);
+
+  const activeCurrency = settings?.currency || profile?.defaultCurrency || "USD";
 
   return (
     <AppShell
@@ -39,7 +49,7 @@ export default async function SettingsPage() {
                 Account Profile
               </h3>
               <p className="text-xs text-[#70757A]">
-                Account Overview & Preferences
+                Account Overview & Credentials
               </p>
             </div>
           </div>
@@ -60,6 +70,15 @@ export default async function SettingsPage() {
           </div>
         </div>
 
+        {/* Currency & Regional Preferences Client */}
+        <SettingsPreferencesClient
+          initialSettings={{
+            currency: activeCurrency,
+            dateFormat: settings?.dateFormat || "YYYY-MM-DD",
+            defaultTemplate: settings?.defaultTemplate || "modern",
+          }}
+        />
+
         {/* Invoice & Brand Shortcuts */}
         <div className="bg-white p-6 rounded-2xl border border-[#E8E8E5] shadow-subtle space-y-3">
           <h3 className="font-serif font-bold text-base text-[#202124] pb-2 border-b border-[#F0F0EE]">
@@ -78,7 +97,7 @@ export default async function SettingsPage() {
                     Business Profile & Logo
                   </span>
                   <span className="text-[#70757A] text-[11px]">
-                    Manage company name, address, tax ID, and banking details.
+                    Manage company name, address, tax ID, banking details, and cropped logo.
                   </span>
                 </div>
               </div>

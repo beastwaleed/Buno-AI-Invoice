@@ -5,7 +5,6 @@ import { redirect } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import Link from "next/link";
 import {
-  DollarSign,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -17,6 +16,8 @@ import {
   Users,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { getCurrencySymbol, getCurrencyDetails } from "@/lib/currencies";
+import { DashboardCurrencySwitcher } from "@/components/dashboard/DashboardCurrencySwitcher";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,8 @@ export default async function DashboardPage() {
     redirect("/auth/login");
   }
 
-  // Fetch metrics & recent invoices
-  const [invoices, customers, profile] = await Promise.all([
+  // Fetch metrics & recent invoices & user settings
+  const [invoices, customers, profile, userSettings] = await Promise.all([
     prisma.invoice.findMany({
       where: { userId: user.id },
       include: { customer: true },
@@ -41,9 +42,19 @@ export default async function DashboardPage() {
     prisma.businessProfile.findUnique({
       where: { userId: user.id },
     }),
+    prisma.userSettings.findUnique({
+      where: { userId: user.id },
+    }),
   ]);
 
-  const currency = profile?.defaultCurrency || "USD";
+  // Determine user's active billing currency
+  const currency =
+    userSettings?.currency ||
+    profile?.defaultCurrency ||
+    (invoices.length > 0 ? invoices[0].currency : "USD");
+  const currencySymbol = getCurrencySymbol(currency);
+  const currencyDetails = getCurrencyDetails(currency);
+
   const totalInvoiced = invoices.reduce((sum, inv) => sum + inv.total, 0);
   const totalPaid = invoices.reduce((sum, inv) => sum + inv.amountPaid, 0);
   const outstanding = invoices.reduce((sum, inv) => sum + inv.balanceDue, 0);
@@ -68,7 +79,7 @@ export default async function DashboardPage() {
                 Create your first studio invoice in 60 seconds
               </h2>
               <p className="text-xs text-[#70757A] mt-1 max-w-xl">
-                Choose from 6 designer templates, add your business logo, and let Buno compute tax, discounts, and export crisp PDFs effortlessly.
+                Choose from 6 designer templates, add your business logo with custom crop ratios, and let Buno compute tax, discounts, and export crisp PDFs effortlessly.
               </p>
             </div>
             <Link
@@ -80,6 +91,24 @@ export default async function DashboardPage() {
             </Link>
           </div>
         )}
+
+        {/* Currency Control & Financial Performance Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-1 border-b border-[#F0F0EE]">
+          <div className="flex items-center gap-2 text-xs text-[#70757A]">
+            <span className="font-semibold uppercase tracking-wider text-[#202124]">
+              Financial Performance
+            </span>
+            <span>•</span>
+            <span>
+              All stats formatted in {currencyDetails.name} ({currencyDetails.symbol})
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <span className="text-xs text-[#70757A] font-medium">Dashboard Currency:</span>
+            <DashboardCurrencySwitcher currentCurrency={currency} />
+          </div>
+        </div>
 
         {/* 4 Core Financial Metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -96,8 +125,8 @@ export default async function DashboardPage() {
                 {invoices.length} lifetime bills
               </span>
             </div>
-            <div className="p-2.5 rounded-xl bg-[#FAFAF8] border border-[#E8E8E5] text-[#202124]">
-              <DollarSign className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-[#FAFAF8] border border-[#E8E8E5] text-[#202124] flex items-center justify-center font-mono font-bold text-sm shadow-2xs">
+              {currencySymbol}
             </div>
           </div>
 

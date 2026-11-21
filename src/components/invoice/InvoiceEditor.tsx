@@ -20,6 +20,7 @@ import {
   DollarSign,
   ArrowLeft,
   CheckCircle2,
+  Crop as CropIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -28,6 +29,8 @@ import { InvoiceRenderer, TEMPLATE_LIST } from "@/components/templates";
 import { ExportMenu } from "@/components/ExportMenu";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
+import { ImageCropModal } from "@/components/common/ImageCropModal";
+import { CURRENCIES } from "@/lib/currencies";
 
 interface InvoiceEditorProps {
   initialInvoice?: InvoiceData;
@@ -190,22 +193,37 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   };
 
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [editorCropModalOpen, setEditorCropModalOpen] = useState(false);
+  const [editorSelectedImageForCrop, setEditorSelectedImageForCrop] = useState<string>("");
 
-  const handleEditorLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleEditorLogoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Logo file size must be less than 5MB.");
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error("Logo file size must be less than 10MB.");
       return;
     }
 
+    const objectUrl = URL.createObjectURL(file);
+    setEditorSelectedImageForCrop(objectUrl);
+    setEditorCropModalOpen(true);
+    e.target.value = "";
+  };
+
+  const handleEditorReCrop = () => {
+    if (!invoice.business?.logoUrl) return;
+    setEditorSelectedImageForCrop(invoice.business.logoUrl);
+    setEditorCropModalOpen(true);
+  };
+
+  const handleEditorApplyCroppedLogo = async (croppedFile: File) => {
     setIsUploadingLogo(true);
-    const uploadToast = toast.loading("Uploading logo...");
+    const uploadToast = toast.loading("Uploading cropped logo...");
 
     try {
       const formData = new FormData();
-      formData.append("file", file);
+      formData.append("file", croppedFile);
 
       const res = await fetch("/api/upload", {
         method: "POST",
@@ -234,7 +252,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           }),
         });
 
-        toast.success("Logo uploaded and updated!", { id: uploadToast });
+        toast.success("Logo cropped and updated!", { id: uploadToast });
       } else {
         toast.error(data.error || "Failed to upload logo", { id: uploadToast });
       }
@@ -711,20 +729,31 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   <input
                     type="file"
                     accept="image/*"
-                    onChange={handleEditorLogoUpload}
+                    onChange={handleEditorLogoFileSelect}
                     disabled={isUploadingLogo}
                     className="hidden"
                   />
                 </label>
                 {invoice.business?.logoUrl && (
-                  <button
-                    type="button"
-                    onClick={handleEditorRemoveLogo}
-                    className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                    title="Remove Logo"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleEditorReCrop}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#4468E8] rounded-lg text-xs font-medium border border-blue-100 transition-colors"
+                      title="Crop and frame logo"
+                    >
+                      <CropIcon className="w-3 h-3" />
+                      <span>Crop</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleEditorRemoveLogo}
+                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Remove Logo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
               </div>
             </div>
@@ -763,16 +792,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     const c = e.target.value;
                     setInvoice({ ...invoice, currency: c });
                   }}
-                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white"
+                  className="w-full px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white font-medium"
                 >
-                  <option value="USD">USD ($) — US Dollar</option>
-                  <option value="EUR">EUR (€) — Euro</option>
-                  <option value="GBP">GBP (£) — British Pound</option>
-                  <option value="CAD">CAD ($) — Canadian Dollar</option>
-                  <option value="AUD">AUD ($) — Australian Dollar</option>
-                  <option value="PKR">PKR (Rs) — Pakistani Rupee</option>
-                  <option value="INR">INR (₹) — Indian Rupee</option>
-                  <option value="AED">AED — UAE Dirham</option>
+                  {CURRENCIES.map((curr) => (
+                    <option key={curr.code} value={curr.code}>
+                      {curr.code} ({curr.symbol}) — {curr.name}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1481,6 +1507,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
         </div>
       )}
+
+      {/* Business Logo Crop & Frame Modal */}
+      <ImageCropModal
+        isOpen={editorCropModalOpen}
+        imageSrc={editorSelectedImageForCrop}
+        onClose={() => setEditorCropModalOpen(false)}
+        onApplyCrop={handleEditorApplyCroppedLogo}
+        title="Crop & Frame Business Logo"
+      />
     </div>
   );
 };

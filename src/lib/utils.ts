@@ -1,5 +1,6 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { getCurrencySymbol } from "./currencies";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -20,14 +21,20 @@ export function formatCurrency(
   amount: number,
   currency: string = "USD"
 ): string {
+  const code = (currency || "USD").toUpperCase();
   try {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
-      currency: currency || "USD",
+      currency: code,
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     }).format(amount || 0);
   } catch {
-    return `${currency || "$"}${(amount || 0).toFixed(2)}`;
+    const symbol = getCurrencySymbol(code);
+    const formatted = (amount || 0).toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${symbol} ${formatted}`;
   }
 }

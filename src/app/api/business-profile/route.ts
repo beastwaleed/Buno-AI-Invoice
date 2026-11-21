@@ -69,6 +69,14 @@ export async function PUT(req: NextRequest) {
       },
     });
 
+    if (data.defaultCurrency) {
+      await prisma.userSettings.upsert({
+        where: { userId: user.id },
+        update: { currency: data.defaultCurrency.toUpperCase() },
+        create: { userId: user.id, currency: data.defaultCurrency.toUpperCase() },
+      }).catch(() => {});
+    }
+
     return NextResponse.json({ success: true, profile });
   } catch (error) {
     console.error("Failed to update business profile:", error);
