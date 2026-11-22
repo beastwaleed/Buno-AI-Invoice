@@ -68,19 +68,47 @@ export async function parsePromptToInvoice(
   }
 
   try {
-    const systemPrompt = `You are an expert financial and billing AI assistant.
-Extract structured invoice details from this natural language description into valid JSON conforming exactly to this structure:
+    const systemPrompt = `You are a world-class multilingual financial and billing AI assistant for Buno Invoice Generator.
+The user may provide invoice details in ANY language or script, including:
+- English
+- Urdu (both Urdu Nastaliq script and Roman Urdu like "Ali Khan k liye 50 hazar rupay ki invoice banao 2 website design k...")
+- Hindi (both Devanagari script and Hinglish like "Sharma Enterprises ke liye 15000 ka bill bana do...")
+- Arabic (e.g., "فاتورة لشركة الأمل بقيمة 5000 درهم...")
+- Spanish, French, German, or any other global language.
+
+Your job:
+1. Accurately understand the user's intent regardless of language, Romanized spelling, accents, or regional phrasing.
+2. Extract or infer:
+   - customerName: The client or company name (e.g., "Ali Khan", "Sharma Enterprises", "Acme Labs").
+   - customerEmail and customerAddress if mentioned.
+   - items: Itemized array of services or products with clean, professional descriptions (translate informal descriptions into crisp invoice line items like "Web Design & Development", "Brand Identity Package", "Consulting Services" while preserving client names).
+   - quantity: Item count (defaults to 1).
+   - unitPrice: Exact unit price as a number. Note: words like "hazar" or "k" mean 1,000 (e.g., "50 hazar" = 50000, "1 lakh" = 100000).
+   - currency: Extract currency from context:
+     * 'rupay', 'rupees', 'rs', 'روپے' -> "PKR" (or "INR" if India-specific context like lakh/crore)
+     * 'dollar', '$' -> "USD" (or "CAD"/"AUD" if specified)
+     * 'euro', '€' -> "EUR"
+     * 'pound', '£' -> "GBP"
+     * 'dirham', 'aed', 'درہم' -> "AED"
+     * 'riyal', 'sar', 'ریال' -> "SAR"
+     * If no currency is mentioned, use user's default currency: "${userCurrency}".
+   - dueDate: Target due date (e.g. YYYY-MM-DD or relative like '14 days' or 'aglay hafte' -> 7 days).
+   - taxRate: Percentage tax if mentioned (e.g., 5, 8, 10).
+   - discount: Discount amount or percentage if mentioned.
+   - notes: Professional thank-you note or terms.
+
+Output conforming strictly to this JSON structure:
 {
   "customerName": "Client or Company name",
   "customerEmail": "email if mentioned",
   "customerAddress": "address if mentioned",
-  "currency": "USD, EUR, GBP, PKR, INR, etc.",
+  "currency": "USD, EUR, GBP, PKR, INR, AED, SAR, etc.",
   "invoiceNumber": "optional number if mentioned",
   "dueDate": "YYYY-MM-DD or relative like '14 days'",
   "paymentTerms": "e.g. Due in 14 days",
   "taxRate": 0,
   "discount": 0,
-  "notes": "Thank you note or instructions",
+  "notes": "Thank you for your business.",
   "items": [
     {
       "description": "Item or service name",
@@ -193,13 +221,18 @@ function fallbackPromptParser(prompt: string, defaultCurrency: string): AIInvoic
   if (p.includes("usd") || p.includes("$") || p.includes("dollar")) currency = "USD";
   else if (p.includes("eur") || p.includes("€") || p.includes("euro")) currency = "EUR";
   else if (p.includes("gbp") || p.includes("£") || p.includes("pound")) currency = "GBP";
-  else if (p.includes("pkr") || p.includes("rs") || p.includes("rupee")) currency = "PKR";
-  else if (p.includes("inr")) currency = "INR";
+  else if (p.includes("pkr") || p.includes("rs") || p.includes("rupee") || p.includes("rupay") || p.includes("روپے")) currency = "PKR";
+  else if (p.includes("inr") || p.includes("₹") || p.includes("lakh")) currency = "INR";
+  else if (p.includes("aed") || p.includes("dirham") || p.includes("درہم")) currency = "AED";
+  else if (p.includes("sar") || p.includes("riyal") || p.includes("ریال")) currency = "SAR";
 
-  // Extract customer name
+  // Extract customer name (support English 'for X', Roman Urdu 'X k liye / ke liye', Hindi, etc.)
   let customerName = "Client Partner";
-  const forMatch = prompt.match(/for\s+([A-Za-z0-9\s&]+?)(?:\.|\,|\band\b|three|two|one|\d|\$|at)/i);
-  if (forMatch && forMatch[1].trim().length > 2) {
+  const forMatch = prompt.match(/(?:for|naam)\s+([A-Za-z0-9\s&]+?)(?:\.|\,|\band\b|three|two|one|\d|\$|at)/i);
+  const urduMatch = prompt.match(/^([A-Za-z0-9\s&]+?)\s+(?:k liye|ke liye)/i);
+  if (urduMatch && urduMatch[1].trim().length > 2) {
+    customerName = urduMatch[1].trim();
+  } else if (forMatch && forMatch[1].trim().length > 2) {
     customerName = forMatch[1].trim();
   }
 

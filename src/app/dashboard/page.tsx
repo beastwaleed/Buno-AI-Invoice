@@ -47,10 +47,10 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  // Determine user's active billing currency
+  // Determine user's active billing currency (Profile takes precedence when user configures business)
   const currency =
-    userSettings?.currency ||
     profile?.defaultCurrency ||
+    userSettings?.currency ||
     (invoices.length > 0 ? invoices[0].currency : "USD");
   const currencySymbol = getCurrencySymbol(currency);
   const currencyDetails = getCurrencyDetails(currency);

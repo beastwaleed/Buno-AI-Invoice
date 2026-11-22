@@ -22,19 +22,16 @@ export function formatCurrency(
   currency: string = "USD"
 ): string {
   const code = (currency || "USD").toUpperCase();
-  try {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: code,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount || 0);
-  } catch {
-    const symbol = getCurrencySymbol(code);
-    const formatted = (amount || 0).toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-    return `${symbol} ${formatted}`;
+  const symbol = getCurrencySymbol(code);
+  const formatted = (amount || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+
+  // Direct symbol prefix for $, €, £, ₹, ¥, etc.
+  if (["$", "€", "£", "₹", "¥", "₺", "₫", "₦"].includes(symbol)) {
+    return `${symbol}${formatted}`;
   }
+  // Spaced prefix for Rs, AED, SAR, CA$, A$, etc.
+  return `${symbol} ${formatted}`;
 }

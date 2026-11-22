@@ -106,6 +106,68 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    // Step 1 of Forgot Password: Verify email exists
+    if (action === "forgot-password-check") {
+      if (!email) {
+        return NextResponse.json({ error: "Email is required" }, { status: 400 });
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+        select: { id: true, name: true, email: true },
+      });
+
+      if (!user) {
+        return NextResponse.json(
+          { error: "No account found with this email address. Please check and try again." },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        name: user.name,
+        email: user.email,
+      });
+    }
+
+    // Step 2 of Forgot Password: Set new password
+    if (action === "reset-password") {
+      const { newPassword } = body;
+      if (!email || !newPassword) {
+        return NextResponse.json(
+          { error: "Email and new password are required" },
+          { status: 400 }
+        );
+      }
+
+      if (newPassword.length < 6) {
+        return NextResponse.json(
+          { error: "Password must be at least 6 characters long" },
+          { status: 400 }
+        );
+      }
+
+      const user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase().trim() },
+      });
+
+      if (!user) {
+        return NextResponse.json({ error: "Account not found" }, { status: 404 });
+      }
+
+      const passwordHash = await hashPassword(newPassword);
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { passwordHash },
+      });
+
+      return NextResponse.json({
+        success: true,
+        message: "Password has been successfully updated. You can now sign in.",
+      });
+    }
+
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
     console.error("Auth API error:", error);

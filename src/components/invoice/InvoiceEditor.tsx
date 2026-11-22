@@ -31,6 +31,7 @@ import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ImageCropModal } from "@/components/common/ImageCropModal";
 import { CURRENCIES } from "@/lib/currencies";
+import { VoiceAssistantButton } from "@/components/invoice/VoiceAssistantButton";
 
 interface InvoiceEditorProps {
   initialInvoice?: InvoiceData;
@@ -1338,14 +1339,73 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 </div>
               </div>
             ) : (
-              <div>
-                <textarea
-                  rows={4}
-                  value={aiPrompt}
-                  onChange={(e) => setAiPrompt(e.target.value)}
-                  placeholder="Example: Create an invoice for Apex Labs. 3 landing pages at $1,200 each and brand identity guide at $800. Apply 8% tax. Due in 15 days."
-                  className="w-full p-3 text-xs rounded-xl border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
-                />
+              <div className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 text-[11px] text-[#70757A]">
+                    <Sparkles className="w-3.5 h-3.5 text-[#4468E8]" />
+                    <span>Type or use Voice Assistance in any language:</span>
+                  </div>
+                  <VoiceAssistantButton
+                    onTranscript={(text) => setAiPrompt(text)}
+                    currentValue={aiPrompt}
+                    disabled={aiLoading}
+                  />
+                </div>
+
+                <div className="relative">
+                  <textarea
+                    rows={4}
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    placeholder="Describe your invoice in English, Urdu (اردو / Roman Urdu), Hindi (हिन्दी / Hinglish), or Arabic.&#10;e.g. 'Ali Khan k liye 50 hazar rupay web development k aur due date 15 din baad ki ho'&#10;or 'Create an invoice for Nexus Corp, 10 hours of UX consulting at $95/hr'"
+                    className="w-full p-3 text-xs rounded-xl border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 leading-relaxed"
+                  />
+                </div>
+
+                {/* Multilingual Voice Quick Sample Chips */}
+                <div className="space-y-1.5">
+                  <div className="text-[10px] font-semibold text-[#70757A] uppercase tracking-wider">
+                    Quick Multilingual Examples (Click to insert):
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAiPrompt(
+                          "Ali Khan k liye 1 invoice banao, 50,000 rupay web design k aur due date 14 din baad ki ho"
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAFAF8] hover:bg-[#EEF2FF] hover:text-[#4468E8] border border-[#E8E8E5] text-[#202124] transition-colors flex items-center gap-1"
+                    >
+                      <span>🇵🇰</span>
+                      <span>Ali Khan k liye 50,000 PKR</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAiPrompt(
+                          "Sharma Enterprises ke liye bill banao, 3 logo designs 8000 rupay har ek ka aur 18% GST tax"
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAFAF8] hover:bg-[#EEF2FF] hover:text-[#4468E8] border border-[#E8E8E5] text-[#202124] transition-colors flex items-center gap-1"
+                    >
+                      <span>🇮🇳</span>
+                      <span>Sharma Tech 3 Logos (GST)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAiPrompt(
+                          "Create an invoice for Apex Studios: 5 landing pages at $1,200 each and brand book at $800, due in 15 days"
+                        )
+                      }
+                      className="px-2.5 py-1 rounded-lg text-[11px] bg-[#FAFAF8] hover:bg-[#EEF2FF] hover:text-[#4468E8] border border-[#E8E8E5] text-[#202124] transition-colors flex items-center gap-1"
+                    >
+                      <span>🇺🇸</span>
+                      <span>Apex Studios: Web & Branding ($)</span>
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
