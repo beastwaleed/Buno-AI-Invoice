@@ -1,5 +1,5 @@
 import React from "react";
-import { InvoiceData, TemplateDefinition, InvoiceFontSizeConfig } from "@/types/invoice";
+import { InvoiceData, TemplateDefinition, InvoiceFontSizeConfig, InvoiceTableConfig } from "@/types/invoice";
 import { ClassicTemplate } from "./ClassicTemplate";
 import { MinimalTemplate } from "./MinimalTemplate";
 import { CorporateTemplate } from "./CorporateTemplate";
@@ -82,6 +82,7 @@ interface InvoiceRendererProps {
   templateId?: string;
   accentColor?: string;
   fontSizeConfig?: InvoiceFontSizeConfig;
+  tableConfig?: InvoiceTableConfig;
 }
 
 export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
@@ -89,15 +90,46 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   templateId,
   accentColor,
   fontSizeConfig,
+  tableConfig,
 }) => {
   const selectedTemplate = templateId || invoice.templateId || "classic";
 
   const fontSizes = fontSizeConfig || invoice.fontSizeConfig || {};
+  const tblConfig = tableConfig || invoice.tableConfig || {};
+
   const headerScale = fontSizes.header || 1.0;
   const bodyScale = fontSizes.body || 1.0;
-  const tableScale = fontSizes.table || 1.0;
+  const tableScale = tblConfig.fontSize || fontSizes.table || 1.0;
   const totalScale = fontSizes.total || 1.0;
   const logoScale = fontSizes.logo || 1.0;
+  const customScales = fontSizes.custom || {};
+
+  const densityPadding =
+    tblConfig.rowDensity === "compact"
+      ? "0.32rem 0.5rem"
+      : tblConfig.rowDensity === "relaxed"
+      ? "0.95rem 0.75rem"
+      : "0.625rem 0.625rem";
+
+  const colWidthRules = (tblConfig.columnWidths && tblConfig.columnWidths.length > 0)
+    ? tblConfig.columnWidths.map((w, idx) => `
+      .invoice-render-wrapper table th:nth-child(${idx + 1}),
+      .invoice-render-wrapper table td:nth-child(${idx + 1}),
+      .invoice-render-wrapper table col:nth-child(${idx + 1}) {
+        width: ${w}% !important;
+        max-width: ${w}% !important;
+      }
+    `).join("\n")
+    : "";
+
+  const customTextRules = Object.entries(customScales)
+    .map(([key, scale]) => `
+      .invoice-render-wrapper [data-invoice-text="${key}"] {
+        --el-scale: ${scale} !important;
+        --cat-scale: ${scale} !important;
+      }
+    `)
+    .join("\n");
 
   const renderTemplateContent = () => {
     switch (selectedTemplate.toLowerCase()) {
@@ -134,6 +166,27 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
             .invoice-render-wrapper [data-invoice-cat="total"] { --cat-scale: ${totalScale}; }
             .invoice-render-wrapper [data-invoice-cat="logo"] { --logo-scale: ${logoScale}; }
 
+            /* Granular individual text scaling */
+            .invoice-render-wrapper [data-invoice-text] {
+              --el-scale: 1;
+              font-size: calc(1em * var(--el-scale, 1));
+              transition: font-size 0.05s ease-out;
+            }
+
+            ${customTextRules}
+
+            .invoice-render-wrapper [data-invoice-text].text-4xl, .invoice-render-wrapper [data-invoice-text] .text-4xl { font-size: calc(2.25rem * var(--el-scale, 1)) !important; line-height: calc(2.5rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-3xl, .invoice-render-wrapper [data-invoice-text] .text-3xl { font-size: calc(1.875rem * var(--el-scale, 1)) !important; line-height: calc(2.25rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-2xl, .invoice-render-wrapper [data-invoice-text] .text-2xl { font-size: calc(1.5rem * var(--el-scale, 1)) !important; line-height: calc(2rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-xl, .invoice-render-wrapper [data-invoice-text] .text-xl { font-size: calc(1.25rem * var(--el-scale, 1)) !important; line-height: calc(1.75rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-lg, .invoice-render-wrapper [data-invoice-text] .text-lg { font-size: calc(1.125rem * var(--el-scale, 1)) !important; line-height: calc(1.75rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-base, .invoice-render-wrapper [data-invoice-text] .text-base { font-size: calc(1rem * var(--el-scale, 1)) !important; line-height: calc(1.5rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-sm, .invoice-render-wrapper [data-invoice-text] .text-sm { font-size: calc(0.875rem * var(--el-scale, 1)) !important; line-height: calc(1.25rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-xs, .invoice-render-wrapper [data-invoice-text] .text-xs { font-size: calc(0.75rem * var(--el-scale, 1)) !important; line-height: calc(1rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-\\[11px\\], .invoice-render-wrapper [data-invoice-text] .text-\\[11px\\] { font-size: calc(0.6875rem * var(--el-scale, 1)) !important; line-height: calc(0.95rem * var(--el-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-text].text-\\[10px\\], .invoice-render-wrapper [data-invoice-text] .text-\\[10px\\] { font-size: calc(0.625rem * var(--el-scale, 1)) !important; line-height: calc(0.85rem * var(--el-scale, 1)) !important; }
+
+            /* Logo dynamic scaling */
             .invoice-render-wrapper [data-invoice-cat="logo"] img,
             .invoice-render-wrapper img[data-invoice-logo="true"] {
               height: calc(3.2rem * var(--logo-scale, 1)) !important;
@@ -141,40 +194,62 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
               width: auto !important;
               max-width: calc(20rem * var(--logo-scale, 1)) !important;
               object-fit: contain !important;
-              transition: height 0.1s ease-out, max-height 0.1s ease-out;
+              transition: height 0.08s ease-out, max-height 0.08s ease-out;
             }
 
-            .invoice-render-wrapper [data-invoice-cat] .text-4xl { font-size: calc(2.25rem * var(--cat-scale, 1)) !important; line-height: calc(2.5rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-3xl { font-size: calc(1.875rem * var(--cat-scale, 1)) !important; line-height: calc(2.25rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-2xl { font-size: calc(1.5rem * var(--cat-scale, 1)) !important; line-height: calc(2rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-xl { font-size: calc(1.25rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-lg { font-size: calc(1.125rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-base { font-size: calc(1rem * var(--cat-scale, 1)) !important; line-height: calc(1.5rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-sm { font-size: calc(0.875rem * var(--cat-scale, 1)) !important; line-height: calc(1.25rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-xs { font-size: calc(0.75rem * var(--cat-scale, 1)) !important; line-height: calc(1rem * var(--cat-scale, 1)) !important; }
-            .invoice-render-wrapper [data-invoice-cat] .text-\\[11px\\],
-            .invoice-render-wrapper [data-invoice-cat] .text-\\[10px\\],
-            .invoice-render-wrapper [data-invoice-cat] .text-\\[9px\\] {
-              font-size: calc(0.6875rem * var(--cat-scale, 1)) !important;
-              line-height: calc(0.95rem * var(--cat-scale, 1)) !important;
-            }
+            /* Category fallback scaling */
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-4xl { font-size: calc(2.25rem * var(--cat-scale, 1)) !important; line-height: calc(2.5rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-3xl { font-size: calc(1.875rem * var(--cat-scale, 1)) !important; line-height: calc(2.25rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-2xl { font-size: calc(1.5rem * var(--cat-scale, 1)) !important; line-height: calc(2rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-xl { font-size: calc(1.25rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-lg { font-size: calc(1.125rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-base { font-size: calc(1rem * var(--cat-scale, 1)) !important; line-height: calc(1.5rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-sm { font-size: calc(0.875rem * var(--cat-scale, 1)) !important; line-height: calc(1.25rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat]:not([data-invoice-text]) .text-xs { font-size: calc(0.75rem * var(--cat-scale, 1)) !important; line-height: calc(1rem * var(--cat-scale, 1)) !important; }
 
+            /* MS Word Table Layout & Density */
+            .invoice-render-wrapper table {
+              table-layout: fixed !important;
+              width: 100% !important;
+            }
+            .invoice-render-wrapper table th,
+            .invoice-render-wrapper table td {
+              padding: ${densityPadding} !important;
+              overflow-wrap: break-word !important;
+              word-break: break-word !important;
+            }
             .invoice-render-wrapper [data-invoice-cat="table"] table th,
             .invoice-render-wrapper [data-invoice-cat="table"] table td {
               font-size: calc(0.75rem * var(--cat-scale, 1));
             }
 
-            #invoice-preview-document [data-invoice-cat] {
+            ${colWidthRules}
+
+            /* Interactive Selection & Hover Feedback */
+            #invoice-preview-document [data-invoice-text],
+            #invoice-preview-document [data-invoice-cat="logo"],
+            #invoice-preview-document [data-invoice-cat="table"] {
               cursor: pointer;
-              transition: outline 0.15s ease-in-out;
+              transition: outline 0.12s ease-in-out;
             }
-            #invoice-preview-document [data-invoice-cat]:hover {
-              outline: 1.5px dashed rgba(59, 130, 246, 0.45);
-              outline-offset: 3px;
+            #invoice-preview-document [data-invoice-text]:hover {
+              outline: 1.5px dashed rgba(59, 130, 246, 0.55);
+              outline-offset: 2px;
+              border-radius: 3px;
+            }
+            #invoice-preview-document [data-invoice-cat="logo"]:hover {
+              outline: 1.5px dashed rgba(59, 130, 246, 0.55);
+              outline-offset: 4px;
               border-radius: 4px;
             }
+            #invoice-preview-document [data-invoice-cat="table"]:hover {
+              outline: 1.5px dashed rgba(99, 102, 241, 0.35);
+              outline-offset: 3px;
+            }
             @media print {
-              #invoice-preview-document [data-invoice-cat] {
+              #invoice-preview-document [data-invoice-text],
+              #invoice-preview-document [data-invoice-cat],
+              #invoice-preview-document table {
                 outline: none !important;
                 cursor: default !important;
               }

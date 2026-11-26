@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
       paymentTerms = "",
       items = [],
       fontSizeConfig,
+      tableConfig,
     } = body;
 
     // Process Items with deterministic calculations
@@ -141,7 +142,11 @@ export async function POST(req: NextRequest) {
         balanceDue: totals.balanceDue,
         notes,
         paymentTerms,
-        businessSnapshot: profile ? JSON.stringify({ ...profile, fontSizeConfig }) : (fontSizeConfig ? JSON.stringify({ fontSizeConfig }) : null),
+        businessSnapshot: profile
+          ? JSON.stringify({ ...profile, fontSizeConfig, tableConfig })
+          : fontSizeConfig || tableConfig
+          ? JSON.stringify({ fontSizeConfig, tableConfig })
+          : null,
         customerSnapshot: customerSnapshot ? JSON.stringify(customerSnapshot) : null,
         items: {
           create: processedItems,

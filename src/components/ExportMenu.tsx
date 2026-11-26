@@ -37,7 +37,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
   }, []);
 
   return (
-    <div className={`relative inline-block text-left ${className}`} ref={menuRef}>
+    <div className={`relative text-left ${className || "inline-block"}`} ref={menuRef}>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}

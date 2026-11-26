@@ -25,6 +25,13 @@ export interface InvoiceFontSizeConfig {
   table?: number;  // multiplier for items, quantities, prices
   total?: number;  // multiplier for subtotal, taxes, totals, notes
   logo?: number;   // multiplier for business logo size: 1.0 = 100%
+  custom?: Record<string, number>; // granular text scaling overrides: textId -> multiplier
+}
+
+export interface InvoiceTableConfig {
+  columnWidths?: number[]; // percentage widths per column summing to ~100%
+  rowDensity?: "compact" | "normal" | "relaxed"; // vertical row padding
+  fontSize?: number; // table font multiplier
 }
 
 export interface BusinessProfileData {
@@ -105,6 +112,7 @@ export interface InvoiceData {
   items: InvoiceItemData[];
   payments?: InvoicePaymentData[];
   fontSizeConfig?: InvoiceFontSizeConfig;
+  tableConfig?: InvoiceTableConfig;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }

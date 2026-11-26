@@ -35,10 +35,10 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="border-b-2 border-slate-800 pb-6 mb-6">
           <div className="flex justify-between items-start">
             <div>
-              <h1 className="text-3xl font-bold uppercase tracking-wider text-slate-900">
+              <h1 data-invoice-text="title" className="text-3xl font-bold uppercase tracking-wider text-slate-900">
                 INVOICE
               </h1>
-              <p className="font-sans text-xs text-slate-500 mt-1">
+              <p data-invoice-text="title-sub" className="font-sans text-xs text-slate-500 mt-1">
                 Original Commercial Instrument
               </p>
             </div>
@@ -53,11 +53,11 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
                   />
                 </div>
               ) : null}
-              <div className="text-xl font-bold font-sans text-slate-800">
+              <div data-invoice-text="business-name" className="text-xl font-bold font-sans text-slate-800">
                 {business.businessName}
               </div>
               {business.registrationNumber && (
-                <div className="font-sans text-xs text-slate-500">
+                <div data-invoice-text="business-reg" className="font-sans text-xs text-slate-500">
                   Reg: {business.registrationNumber}
                 </div>
               )}
@@ -66,15 +66,15 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Metadata Box */}
-        <div data-invoice-cat="body" className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-300 font-sans text-xs mb-6">
+        <div data-invoice-cat="body" data-invoice-text="invoice-meta" className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-300 font-sans text-xs mb-6">
           <div>
             <div className="grid grid-cols-2 gap-1">
               <span className="font-semibold text-slate-700">Invoice No:</span>
-              <span className="font-mono font-bold text-slate-900">{invoiceNumber}</span>
+              <span data-invoice-text="inv-number" className="font-mono font-bold text-slate-900">{invoiceNumber}</span>
               <span className="font-semibold text-slate-700">Date of Issue:</span>
-              <span>{formatDate(invoiceDate)}</span>
+              <span data-invoice-text="inv-date">{formatDate(invoiceDate)}</span>
               <span className="font-semibold text-slate-700">Payment Due:</span>
-              <span className="font-bold text-slate-900">{formatDate(dueDate)}</span>
+              <span data-invoice-text="inv-due" className="font-bold text-slate-900">{formatDate(dueDate)}</span>
             </div>
           </div>
           <div>
@@ -92,34 +92,38 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         {/* Client & Issuer Columns */}
         <div data-invoice-cat="body" className="grid grid-cols-2 gap-8 mb-6 font-sans text-xs">
           <div className="border-l-2 border-slate-400 pl-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <span data-invoice-text="issuer-title" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Issued By
             </span>
-            <p className="font-bold text-slate-900">{business.businessName}</p>
-            {business.address && (
-              <p className="text-slate-600 whitespace-pre-line">{business.address}</p>
-            )}
-            {business.email && <p className="text-slate-600">{business.email}</p>}
-            {business.phone && <p className="text-slate-600">{business.phone}</p>}
+            <p data-invoice-text="business-name" className="font-bold text-slate-900">{business.businessName}</p>
+            <div data-invoice-text="business-details">
+              {business.address && (
+                <p className="text-slate-600 whitespace-pre-line">{business.address}</p>
+              )}
+              {business.email && <p className="text-slate-600">{business.email}</p>}
+              {business.phone && <p className="text-slate-600">{business.phone}</p>}
+            </div>
           </div>
 
           <div className="border-l-2 border-slate-800 pl-3">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
+            <span data-invoice-text="client-title" className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Bill To
             </span>
             {customer ? (
               <>
-                <p className="font-bold text-slate-900">{customer.name}</p>
-                {customer.companyName && (
-                  <p className="font-medium text-slate-700">{customer.companyName}</p>
-                )}
-                {customer.address && (
-                  <p className="text-slate-600 whitespace-pre-line">{customer.address}</p>
-                )}
-                {customer.email && <p className="text-slate-600">{customer.email}</p>}
-                {customer.taxNumber && (
-                  <p className="font-mono text-slate-600">VAT: {customer.taxNumber}</p>
-                )}
+                <p data-invoice-text="client-name" className="font-bold text-slate-900">{customer.name}</p>
+                <div data-invoice-text="client-details">
+                  {customer.companyName && (
+                    <p className="font-medium text-slate-700">{customer.companyName}</p>
+                  )}
+                  {customer.address && (
+                    <p className="text-slate-600 whitespace-pre-line">{customer.address}</p>
+                  )}
+                  {customer.email && <p className="text-slate-600">{customer.email}</p>}
+                  {customer.taxNumber && (
+                    <p className="font-mono text-slate-600">VAT: {customer.taxNumber}</p>
+                  )}
+                </div>
               </>
             ) : (
               <p className="italic text-slate-400">Recipient unassigned</p>
@@ -130,7 +134,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         {/* Traditional Framed Table */}
         <div data-invoice-cat="table" className="border border-slate-400 font-sans text-xs">
           <table className="w-full text-left">
-            <thead className="bg-slate-200 border-b border-slate-400 text-slate-800 font-bold uppercase tracking-wider text-[11px]">
+            <thead data-invoice-text="table-head" className="bg-slate-200 border-b border-slate-400 text-slate-800 font-bold uppercase tracking-wider text-[11px]">
               <tr>
                 <th className="py-2.5 px-3 border-r border-slate-300 w-12 text-center">#</th>
                 <th className="py-2.5 px-3 border-r border-slate-300">Description of Service / Goods</th>
@@ -145,16 +149,16 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
                   <td className="py-2.5 px-3 border-r border-slate-200 text-center font-mono text-slate-500">
                     {index + 1}
                   </td>
-                  <td className="py-2.5 px-3 border-r border-slate-200 font-medium text-slate-800">
+                  <td data-invoice-text="table-desc" className="py-2.5 px-3 border-r border-slate-200 font-medium text-slate-800">
                     {item.description}
                   </td>
-                  <td className="py-2.5 px-3 border-r border-slate-200 text-center font-mono">
+                  <td data-invoice-text="table-qty" className="py-2.5 px-3 border-r border-slate-200 text-center font-mono">
                     {item.quantity} {item.unit || ""}
                   </td>
-                  <td className="py-2.5 px-3 border-r border-slate-200 text-right font-mono">
+                  <td data-invoice-text="table-price" className="py-2.5 px-3 border-r border-slate-200 text-right font-mono">
                     {formatCurrency(item.unitPrice, currency)}
                   </td>
-                  <td className="py-2.5 px-3 text-right font-mono font-medium text-slate-900">
+                  <td data-invoice-text="table-amount" className="py-2.5 px-3 text-right font-mono font-medium text-slate-900">
                     {formatCurrency(item.lineTotal, currency)}
                   </td>
                 </tr>
@@ -167,7 +171,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="total" className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6 font-sans text-xs">
           <div className="w-full sm:w-1/2 space-y-3">
             {business.bankDetails && (
-              <div className="border border-slate-300 p-3 bg-slate-50">
+              <div data-invoice-text="bank-details" className="border border-slate-300 p-3 bg-slate-50">
                 <span className="font-bold text-slate-800 block mb-1">
                   Remittance / Bank Instructions:
                 </span>
@@ -177,19 +181,19 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
               </div>
             )}
             {notes && (
-              <p className="italic text-slate-600">
+              <p data-invoice-text="notes" className="italic text-slate-600">
                 <span className="font-bold not-italic">Notes:</span> {notes}
               </p>
             )}
           </div>
 
           <div className="w-full sm:w-72 border border-slate-400 bg-slate-50 divide-y divide-slate-300">
-            <div className="flex justify-between p-2">
+            <div data-invoice-text="subtotal" className="flex justify-between p-2">
               <span className="text-slate-600">Subtotal:</span>
               <span className="font-mono font-medium">{formatCurrency(subtotal, currency)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between p-2 text-emerald-700">
+              <div data-invoice-text="discount" className="flex justify-between p-2 text-emerald-700">
                 <span>Discount:</span>
                 <span className="font-mono">
                   -{formatCurrency(
@@ -200,12 +204,12 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
               </div>
             )}
             {taxRate > 0 && (
-              <div className="flex justify-between p-2 text-slate-600">
+              <div data-invoice-text="tax" className="flex justify-between p-2 text-slate-600">
                 <span>Sales Tax ({taxRate}%):</span>
                 <span className="font-mono">+{formatCurrency(taxTotal, currency)}</span>
               </div>
             )}
-            <div className="flex justify-between p-2.5 bg-slate-200 font-bold text-sm text-slate-900">
+            <div data-invoice-text="grand-total" className="flex justify-between p-2.5 bg-slate-200 font-bold text-sm text-slate-900">
               <span>Grand Total:</span>
               <span className="font-mono">{formatCurrency(total, currency)}</span>
             </div>

@@ -49,6 +49,7 @@ export default async function EditInvoicePage({
   const formattedInvoice: any = {
     ...invoice,
     fontSizeConfig: parsedBusinessSnapshot.fontSizeConfig || undefined,
+    tableConfig: parsedBusinessSnapshot.tableConfig || undefined,
     invoiceDate: invoice.invoiceDate.toISOString().split("T")[0],
     dueDate: invoice.dueDate.toISOString().split("T")[0],
     business: {

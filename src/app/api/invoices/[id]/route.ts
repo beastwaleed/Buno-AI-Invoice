@@ -63,6 +63,7 @@ export async function PUT(
       paymentTerms,
       items = [],
       fontSizeConfig,
+      tableConfig,
     } = body;
 
     // Recalculate deterministic line totals
@@ -100,6 +101,7 @@ export async function PUT(
         if (existing?.businessSnapshot) snap = JSON.parse(existing.businessSnapshot);
       } catch {}
       if (fontSizeConfig) snap.fontSizeConfig = fontSizeConfig;
+      if (tableConfig) snap.tableConfig = tableConfig;
 
       return tx.invoice.update({
         where: { id: params.id, userId: user.id },

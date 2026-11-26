@@ -52,42 +52,42 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
               </div>
             )}
             <div>
-              <h1 className="text-xl font-bold text-slate-900 tracking-tight">
+              <h1 data-invoice-text="business-name" className="text-xl font-bold text-slate-900 tracking-tight">
                 {business.businessName}
               </h1>
-              <p className="text-xs text-slate-500">Corporate Billing & Settlement</p>
+              <p data-invoice-text="title-sub" className="text-xs text-slate-500">Corporate Billing & Settlement</p>
             </div>
           </div>
 
           <div className="mt-4 sm:mt-0 text-left sm:text-right">
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-widest block">
+            <span data-invoice-text="title" className="text-xs font-semibold text-slate-500 uppercase tracking-widest block">
               Official Tax Invoice
             </span>
-            <span className="text-2xl font-mono font-bold text-[#1E3A5F]">
+            <span data-invoice-text="inv-number" className="text-2xl font-mono font-bold text-[#1E3A5F]">
               {invoiceNumber}
             </span>
           </div>
         </div>
 
         {/* Enterprise Metadata Grid */}
-        <div data-invoice-cat="body" className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 p-4 my-6 text-xs">
+        <div data-invoice-cat="body" data-invoice-text="invoice-meta" className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 p-4 my-6 text-xs">
           <div>
             <span className="text-slate-400 block uppercase tracking-wider text-[10px]">
               Issue Date
             </span>
-            <span className="font-semibold text-slate-900">{formatDate(invoiceDate)}</span>
+            <span data-invoice-text="inv-date" className="font-semibold text-slate-900">{formatDate(invoiceDate)}</span>
           </div>
           <div>
             <span className="text-slate-400 block uppercase tracking-wider text-[10px]">
               Due Date
             </span>
-            <span className="font-semibold text-slate-900">{formatDate(dueDate)}</span>
+            <span data-invoice-text="inv-due" className="font-semibold text-slate-900">{formatDate(dueDate)}</span>
           </div>
           <div>
             <span className="text-slate-400 block uppercase tracking-wider text-[10px]">
               Tax / VAT ID
             </span>
-            <span className="font-mono font-semibold text-slate-900">
+            <span data-invoice-text="business-reg" className="font-mono font-semibold text-slate-900">
               {business.taxNumber || "N/A"}
             </span>
           </div>
@@ -101,7 +101,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
 
         {/* Sender & Receiver Cards */}
         <div data-invoice-cat="body" className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs">
-          <div className="p-4 rounded border border-slate-200 bg-white shadow-sm">
+          <div data-invoice-text="business-details" className="p-4 rounded border border-slate-200 bg-white shadow-sm">
             <div className="text-[10px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-2">
               Issuer Entity Details
             </div>
@@ -113,13 +113,13 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
             {business.phone && <p className="text-slate-600">{business.phone}</p>}
           </div>
 
-          <div className="p-4 rounded border border-slate-200 bg-white shadow-sm">
+          <div data-invoice-text="client-details" className="p-4 rounded border border-slate-200 bg-white shadow-sm">
             <div className="text-[10px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-2">
               Corporate Account / Billed To
             </div>
             {customer ? (
               <>
-                <p className="font-bold text-slate-900 text-sm">{customer.companyName || customer.name}</p>
+                <p data-invoice-text="client-name" className="font-bold text-slate-900 text-sm">{customer.companyName || customer.name}</p>
                 {customer.companyName && customer.name && (
                   <p className="text-slate-600">Attn: {customer.name}</p>
                 )}
@@ -141,7 +141,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         <div data-invoice-cat="table" className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="bg-[#1E3A5F] text-white font-semibold uppercase tracking-wider text-[11px]">
+              <tr data-invoice-text="table-head" className="bg-[#1E3A5F] text-white font-semibold uppercase tracking-wider text-[11px]">
                 <th className="py-3 px-3">Item / Service Deliverable</th>
                 <th className="py-3 px-3 text-center w-16">Qty</th>
                 <th className="py-3 px-3 text-right w-24">Unit Rate</th>
@@ -152,15 +152,15 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
               {items.map((item, index) => (
                 <tr key={index} className={index % 2 === 1 ? "bg-slate-50/50" : ""}>
                   <td className="py-3.5 px-3">
-                    <p className="font-medium text-slate-900">{item.description}</p>
+                    <p data-invoice-text="table-desc" className="font-medium text-slate-900">{item.description}</p>
                   </td>
-                  <td className="py-3.5 px-3 text-center font-mono text-slate-600">
+                  <td data-invoice-text="table-qty" className="py-3.5 px-3 text-center font-mono text-slate-600">
                     {item.quantity} {item.unit || ""}
                   </td>
-                  <td className="py-3.5 px-3 text-right font-mono text-slate-600">
+                  <td data-invoice-text="table-price" className="py-3.5 px-3 text-right font-mono text-slate-600">
                     {formatCurrency(item.unitPrice, currency)}
                   </td>
-                  <td className="py-3.5 px-3 text-right font-mono font-bold text-slate-900">
+                  <td data-invoice-text="table-amount" className="py-3.5 px-3 text-right font-mono font-bold text-slate-900">
                     {formatCurrency(item.lineTotal, currency)}
                   </td>
                 </tr>
@@ -173,7 +173,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         <div data-invoice-cat="total" className="flex flex-col sm:flex-row justify-between items-start gap-8 mt-6">
           <div className="w-full sm:w-1/2 text-xs space-y-3">
             {business.bankDetails && (
-              <div className="p-3.5 rounded bg-slate-50 border border-slate-200">
+              <div data-invoice-text="bank-details" className="p-3.5 rounded bg-slate-50 border border-slate-200">
                 <span className="font-bold text-slate-900 block mb-1">
                   Electronic Funds Transfer (EFT / Wire):
                 </span>
@@ -183,24 +183,24 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
               </div>
             )}
             {paymentTerms && (
-              <p className="text-slate-600">
+              <p data-invoice-text="payment-terms" className="text-slate-600">
                 <span className="font-semibold text-slate-900">Payment Terms:</span> {paymentTerms}
               </p>
             )}
             {notes && (
-              <p className="text-slate-600 italic">
+              <p data-invoice-text="notes" className="text-slate-600 italic">
                 <span className="font-semibold not-italic text-slate-900">Remarks:</span> {notes}
               </p>
             )}
           </div>
 
           <div className="w-full sm:w-72 space-y-2 text-xs bg-slate-50 p-4 rounded border border-slate-200">
-            <div className="flex justify-between text-slate-600">
+            <div data-invoice-text="subtotal" className="flex justify-between text-slate-600">
               <span>Subtotal:</span>
               <span className="font-mono font-medium">{formatCurrency(subtotal, currency)}</span>
             </div>
             {discount > 0 && (
-              <div className="flex justify-between text-emerald-700">
+              <div data-invoice-text="discount" className="flex justify-between text-emerald-700">
                 <span>Enterprise Rebate:</span>
                 <span className="font-mono">
                   -{formatCurrency(
@@ -211,12 +211,12 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
               </div>
             )}
             {taxRate > 0 && (
-              <div className="flex justify-between text-slate-600">
+              <div data-invoice-text="tax" className="flex justify-between text-slate-600">
                 <span>Value Added Tax ({taxRate}%):</span>
                 <span className="font-mono">+{formatCurrency(taxTotal, currency)}</span>
               </div>
             )}
-            <div className="flex justify-between py-2 border-t-2 border-[#1E3A5F] text-sm font-bold text-slate-900">
+            <div data-invoice-text="grand-total" className="flex justify-between py-2 border-t-2 border-[#1E3A5F] text-sm font-bold text-slate-900">
               <span>Total Payable:</span>
               <span className="font-mono text-[#1E3A5F]">{formatCurrency(total, currency)}</span>
             </div>

@@ -26,6 +26,7 @@ import {
   Sliders,
   X,
   MoveDiagonal2,
+  Table as TableIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -39,6 +40,50 @@ import { CURRENCIES } from "@/lib/currencies";
 import { VoiceAssistantButton } from "@/components/invoice/VoiceAssistantButton";
 
 export type CategoryKey = "logo" | "header" | "body" | "table" | "total";
+
+export interface VisualSelection {
+  type: "text" | "logo" | "table";
+  key: string;
+  label: string;
+}
+
+export const getFriendlyLabel = (key: string, snippet?: string): string => {
+  const map: Record<string, string> = {
+    title: "Invoice Title",
+    "title-sub": "Title Subtitle",
+    logo: "Business Logo",
+    table: "Invoice Table",
+    "table-head": "Table Column Headers",
+    "table-desc": "Line Item Description",
+    "table-qty": "Item Quantity",
+    "table-price": "Unit Price",
+    "table-amount": "Line Total",
+    "business-name": "Company Name",
+    "business-details": "Company Details",
+    "business-reg": "Business Reg #",
+    "issuer-title": "Issuer Label",
+    "client-title": "Bill To Label",
+    "client-name": "Customer Name",
+    "client-details": "Customer Details",
+    "invoice-meta": "Invoice Specifications",
+    "inv-number": "Invoice Number",
+    "inv-date": "Issue Date",
+    "inv-due": "Due Date",
+    subtotal: "Subtotal",
+    discount: "Discount",
+    tax: "Sales Tax",
+    "grand-total": "Grand Total",
+    notes: "Notes & Terms",
+    "payment-terms": "Payment Terms",
+    "bank-details": "Bank Instructions",
+  };
+  if (map[key]) return map[key];
+  if (snippet) {
+    const clean = snippet.trim().replace(/\s+/g, " ").slice(0, 22);
+    if (clean.length > 0) return `"${clean}"`;
+  }
+  return "Selected Text";
+};
 
 export const FONT_CATEGORIES = [
   {
@@ -100,8 +145,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const [fontPanelOpen, setFontPanelOpen] = useState(false);
   const [fontModalOpen, setFontModalOpen] = useState(false);
 
-  // Active selected category for on-canvas visual drag resizing
-  const [activeVisualCat, setActiveVisualCat] = useState<CategoryKey | null>(null);
+  // Active selected target (any text, logo, or table) for on-canvas visual drag resizing
+  const [activeSelection, setActiveSelection] = useState<VisualSelection | null>(null);
   const [isDraggingHandle, setIsDraggingHandle] = useState(false);
   const [selectedBox, setSelectedBox] = useState<{
     top: number;
@@ -109,6 +154,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     width: number;
     height: number;
   } | null>(null);
+
+  // MS Word Column Divider Drag State
+  const [isDraggingDivider, setIsDraggingDivider] = useState(false);
+  const [draggingDividerIndex, setDraggingDividerIndex] = useState<number | null>(null);
+  const [columnDividers, setColumnDividers] = useState<
+    Array<{ index: number; left: number; top: number; height: number }>
+  >([]);
 
   const handleUpdateFontSize = (
     category: CategoryKey,
@@ -217,6 +269,12 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           body: initialInvoice.fontSizeConfig?.body ?? 1.0,
           table: initialInvoice.fontSizeConfig?.table ?? 1.0,
           total: initialInvoice.fontSizeConfig?.total ?? 1.0,
+          custom: initialInvoice.fontSizeConfig?.custom || {},
+        },
+        tableConfig: initialInvoice.tableConfig || {
+          columnWidths: undefined,
+          rowDensity: "normal",
+          fontSize: 1.0,
         },
         business: {
           ...initialInvoice.business,
@@ -256,6 +314,12 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         body: 1.0,
         table: 1.0,
         total: 1.0,
+        custom: {},
+      },
+      tableConfig: {
+        columnWidths: undefined,
+        rowDensity: "normal",
+        fontSize: 1.0,
       },
       status: "draft",
       invoiceDate: new Date().toISOString().split("T")[0],
@@ -289,20 +353,144 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       (invoice.fontSizeConfig?.header ?? 1.0) !== 1.0 ||
       (invoice.fontSizeConfig?.body ?? 1.0) !== 1.0 ||
       (invoice.fontSizeConfig?.table ?? 1.0) !== 1.0 ||
-      (invoice.fontSizeConfig?.total ?? 1.0) !== 1.0);
+      (invoice.fontSizeConfig?.total ?? 1.0) !== 1.0 ||
+      Boolean(invoice.fontSizeConfig?.custom && Object.keys(invoice.fontSizeConfig.custom).length > 0) ||
+      invoice.tableConfig?.rowDensity !== "normal" ||
+      Boolean(invoice.tableConfig?.columnWidths));
 
-  // Measure and position visual bounding box around selected category on canvas
+  const getActiveScale = (): number => {
+    if (!activeSelection) return 1.0;
+    if (activeSelection.type === "logo") {
+      return invoice.fontSizeConfig?.logo ?? 1.0;
+    }
+    if (activeSelection.type === "table") {
+      return invoice.tableConfig?.fontSize ?? invoice.fontSizeConfig?.table ?? 1.0;
+    }
+    if (activeSelection.type === "text") {
+      return (
+        invoice.fontSizeConfig?.custom?.[activeSelection.key] ??
+        (activeSelection.key === "title"
+          ? invoice.fontSizeConfig?.header ?? 1.0
+          : activeSelection.key === "grand-total"
+          ? invoice.fontSizeConfig?.total ?? 1.0
+          : 1.0)
+      );
+    }
+    return 1.0;
+  };
+
+  const handleSetActiveScale = (scale: number) => {
+    if (!activeSelection) return;
+    const rounded = Math.round(scale * 100) / 100;
+    setInvoice((prev) => {
+      if (activeSelection.type === "logo") {
+        return {
+          ...prev,
+          fontSizeConfig: {
+            ...(prev.fontSizeConfig || { logo: 1.0, header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
+            logo: rounded,
+          },
+        };
+      }
+      if (activeSelection.type === "table") {
+        return {
+          ...prev,
+          tableConfig: {
+            ...(prev.tableConfig || { rowDensity: "normal" }),
+            fontSize: rounded,
+          },
+          fontSizeConfig: {
+            ...(prev.fontSizeConfig || { logo: 1.0, header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
+            table: rounded,
+          },
+        };
+      }
+      return {
+        ...prev,
+        fontSizeConfig: {
+          ...(prev.fontSizeConfig || { logo: 1.0, header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
+          custom: {
+            ...(prev.fontSizeConfig?.custom || {}),
+            [activeSelection.key]: rounded,
+          },
+        },
+      };
+    });
+  };
+
+  const handleUpdateActiveScale = (delta: number) => {
+    const current = getActiveScale();
+    const next = Math.max(0.55, Math.min(2.2, Math.round((current + delta) * 20) / 20));
+    handleSetActiveScale(next);
+  };
+
+  const handleResetActiveScale = () => {
+    handleSetActiveScale(1.0);
+    toast.success("Size reset to 100%");
+  };
+
+  const handleSetRowDensity = (density: "compact" | "normal" | "relaxed") => {
+    setInvoice((prev) => ({
+      ...prev,
+      tableConfig: {
+        ...(prev.tableConfig || {}),
+        rowDensity: density,
+      },
+    }));
+  };
+
+  const handleDistributeColumnsEvenly = () => {
+    const container = document.getElementById("invoice-preview-document");
+    const ths = container?.querySelectorAll("table thead th, table tr:first-child th, table tr:first-child td");
+    const count = ths?.length || 5;
+    const even = Math.round((100 / count) * 10) / 10;
+    const widths = Array(count).fill(even);
+    const diff = Math.round((100 - even * count) * 10) / 10;
+    widths[widths.length - 1] = Math.round((widths[widths.length - 1] + diff) * 10) / 10;
+
+    setInvoice((prev) => ({
+      ...prev,
+      tableConfig: {
+        ...(prev.tableConfig || {}),
+        columnWidths: widths,
+      },
+    }));
+    toast.success("Columns distributed evenly (Word-style)");
+  };
+
+  const handleResetTableConfig = () => {
+    setInvoice((prev) => ({
+      ...prev,
+      tableConfig: {
+        columnWidths: undefined,
+        rowDensity: "normal",
+        fontSize: 1.0,
+      },
+      fontSizeConfig: {
+        ...(prev.fontSizeConfig || { logo: 1.0, header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
+        table: 1.0,
+      },
+    }));
+    toast.success("Table layout reset to default");
+  };
+
+  // Measure and position visual bounding box around selected target on canvas
   const updateSelectedBox = React.useCallback(() => {
-    if (!activeVisualCat) {
+    if (!activeSelection) {
       setSelectedBox(null);
       return;
     }
     const container = document.getElementById("invoice-preview-document");
     if (!container) return;
 
-    const target = container.querySelector(
-      `[data-invoice-cat="${activeVisualCat}"]`
-    ) as HTMLElement | null;
+    let target: HTMLElement | null = null;
+    if (activeSelection.type === "logo") {
+      target = container.querySelector('[data-invoice-cat="logo"], img[data-invoice-logo="true"]') as HTMLElement | null;
+    } else if (activeSelection.type === "table") {
+      target = container.querySelector('table, [data-invoice-cat="table"]') as HTMLElement | null;
+    } else if (activeSelection.type === "text") {
+      target = container.querySelector(`[data-invoice-text="${activeSelection.key}"]`) as HTMLElement | null;
+    }
 
     if (!target) {
       setSelectedBox(null);
@@ -313,14 +501,14 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     const targetRect = target.getBoundingClientRect();
 
     const scale = Math.max(0.35, (zoomLevel || 100) / 100);
-    const padding = 4;
+    const padding = activeSelection.type === "table" ? 2 : 4;
     const top = Math.max(0, (targetRect.top - containerRect.top) / scale - padding);
     const left = Math.max(0, (targetRect.left - containerRect.left) / scale - padding);
     const width = targetRect.width / scale + padding * 2;
     const height = targetRect.height / scale + padding * 2;
 
     setSelectedBox({ top, left, width, height });
-  }, [activeVisualCat, zoomLevel, invoice.fontSizeConfig, invoice.templateId]);
+  }, [activeSelection, zoomLevel, invoice.fontSizeConfig, invoice.tableConfig, invoice.templateId]);
 
   useEffect(() => {
     updateSelectedBox();
@@ -332,15 +520,115 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     };
   }, [updateSelectedBox]);
 
+  // MS Word Column Divider Measurements
+  const updateColumnDividers = React.useCallback(() => {
+    const container = document.getElementById("invoice-preview-document");
+    if (!container) return;
+    const table = container.querySelector("table");
+    if (!table) {
+      setColumnDividers([]);
+      return;
+    }
+    const containerRect = container.getBoundingClientRect();
+    const tableRect = table.getBoundingClientRect();
+    const scale = Math.max(0.35, (zoomLevel || 100) / 100);
+
+    const ths = Array.from(table.querySelectorAll("thead th, tr:first-child th, tr:first-child td")) as HTMLElement[];
+    if (ths.length < 2) {
+      setColumnDividers([]);
+      return;
+    }
+
+    const tableTop = (tableRect.top - containerRect.top) / scale;
+    const tableHeight = tableRect.height / scale;
+
+    const dividers: Array<{ index: number; left: number; top: number; height: number }> = [];
+    for (let i = 0; i < ths.length - 1; i++) {
+      const thRect = ths[i].getBoundingClientRect();
+      const dividerX = (thRect.right - containerRect.left) / scale;
+      dividers.push({
+        index: i,
+        left: dividerX,
+        top: tableTop,
+        height: tableHeight,
+      });
+    }
+    setColumnDividers(dividers);
+  }, [zoomLevel, invoice.tableConfig, invoice.items, invoice.templateId]);
+
+  useEffect(() => {
+    updateColumnDividers();
+    const timer = setTimeout(updateColumnDividers, 50);
+    window.addEventListener("resize", updateColumnDividers);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateColumnDividers);
+    };
+  }, [updateColumnDividers]);
+
+  const handleColumnDividerPointerDown = (e: React.PointerEvent, dividerIndex: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const container = document.getElementById("invoice-preview-document");
+    if (!container) return;
+    const table = container.querySelector("table");
+    if (!table) return;
+
+    const scale = Math.max(0.35, (zoomLevel || 100) / 100);
+    const tableWidth = table.getBoundingClientRect().width / scale;
+    const startX = e.clientX;
+
+    const ths = Array.from(table.querySelectorAll("thead th, tr:first-child th, tr:first-child td")) as HTMLElement[];
+    const currentWidths: number[] =
+      invoice.tableConfig?.columnWidths?.length === ths.length
+        ? [...invoice.tableConfig.columnWidths]
+        : ths.map((th) => (th.getBoundingClientRect().width / (tableWidth * scale)) * 100);
+
+    const initialLeftColWidth = currentWidths[dividerIndex];
+    const initialRightColWidth = currentWidths[dividerIndex + 1];
+
+    setIsDraggingDivider(true);
+    setDraggingDividerIndex(dividerIndex);
+    setActiveSelection({ type: "table", key: "table", label: "Invoice Table" });
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      const deltaX = ((moveEvt.clientX - startX) / (scale * tableWidth)) * 100;
+      const maxDelta = initialRightColWidth - 6;
+      const minDelta = -(initialLeftColWidth - 6);
+      const clampedDelta = Math.max(minDelta, Math.min(maxDelta, deltaX));
+
+      const nextWidths = [...currentWidths];
+      nextWidths[dividerIndex] = Math.round((initialLeftColWidth + clampedDelta) * 10) / 10;
+      nextWidths[dividerIndex + 1] = Math.round((initialRightColWidth - clampedDelta) * 10) / 10;
+
+      setInvoice((prev) => ({
+        ...prev,
+        tableConfig: {
+          ...(prev.tableConfig || {}),
+          columnWidths: nextWidths,
+        },
+      }));
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingDivider(false);
+      setDraggingDividerIndex(null);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
+
   const handleDragHandlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    if (!activeVisualCat) return;
+    if (!activeSelection) return;
 
     const startX = e.clientX;
     const startY = e.clientY;
-    const initialScale =
-      invoice.fontSizeConfig?.[activeVisualCat] || 1.0;
+    const initialScale = getActiveScale();
 
     setIsDraggingHandle(true);
     const zoomFactor = Math.max(0.35, (zoomLevel || 100) / 100);
@@ -348,25 +636,14 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     const onPointerMove = (moveEvt: PointerEvent) => {
       const deltaX = moveEvt.clientX - startX;
       const deltaY = moveEvt.clientY - startY;
-      const delta = (deltaX + deltaY) / (150 * zoomFactor);
+      const divisor = activeSelection.type === "table" ? 220 : 150;
+      const delta = (deltaX + deltaY) / (divisor * zoomFactor);
       const newScale = Math.max(
         0.55,
-        Math.min(2.1, Math.round((initialScale + delta) * 20) / 20)
+        Math.min(2.2, Math.round((initialScale + delta) * 20) / 20)
       );
 
-      setInvoice((prev) => ({
-        ...prev,
-        fontSizeConfig: {
-          ...(prev.fontSizeConfig || {
-            logo: 1.0,
-            header: 1.0,
-            body: 1.0,
-            table: 1.0,
-            total: 1.0,
-          }),
-          [activeVisualCat]: newScale,
-        },
-      }));
+      handleSetActiveScale(newScale);
     };
 
     const onPointerUp = () => {
@@ -380,13 +657,57 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   };
 
   const handlePreviewDocumentClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const target = (e.target as HTMLElement).closest("[data-invoice-cat]") as HTMLElement | null;
-    if (target) {
-      const cat = target.getAttribute("data-invoice-cat") as CategoryKey | null;
-      if (cat) {
-        setActiveVisualCat(cat);
-        return;
+    const target = e.target as HTMLElement;
+
+    // 1. Logo
+    const logoTarget = target.closest('[data-invoice-cat="logo"]');
+    if (logoTarget) {
+      setActiveSelection({ type: "logo", key: "logo", label: "Business Logo" });
+      return;
+    }
+
+    // 2. Pre-tagged specific text element
+    const textTarget = target.closest("[data-invoice-text]") as HTMLElement | null;
+    if (textTarget) {
+      const key = textTarget.getAttribute("data-invoice-text")!;
+      setActiveSelection({
+        type: "text",
+        key,
+        label: getFriendlyLabel(key, textTarget.textContent || ""),
+      });
+      return;
+    }
+
+    // 3. Table border, table th, or table container
+    const tableTarget = target.closest('table, [data-invoice-cat="table"]') as HTMLElement | null;
+    if (
+      tableTarget &&
+      (target.tagName === "TABLE" ||
+        target.tagName === "TH" ||
+        target.getAttribute("data-invoice-cat") === "table")
+    ) {
+      setActiveSelection({ type: "table", key: "table", label: "Invoice Table" });
+      return;
+    }
+
+    // 4. Any other text node in the document
+    const genericEl = target.closest(
+      "h1, h2, h3, h4, h5, h6, p, span, td, th, label, b, strong, em"
+    ) as HTMLElement | null;
+    if (genericEl && genericEl.id !== "invoice-preview-document") {
+      let key = genericEl.getAttribute("data-invoice-text");
+      if (!key) {
+        const rawText = genericEl.textContent?.trim().slice(0, 14) || "custom";
+        const cleanSlug = rawText
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "-")
+          .replace(/-+/g, "-");
+        key = `txt-${cleanSlug || "item"}`;
+        genericEl.setAttribute("data-invoice-text", key);
       }
+      const snippet = genericEl.textContent?.trim().slice(0, 22) || "Text";
+      setActiveSelection({ type: "text", key, label: `"${snippet}"` });
+      return;
     }
   };
 
@@ -878,9 +1199,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: 2 rows on mobile (Row 1: AI Studio & Fonts, Row 2: Export & Save), inline-flex on sm+ screens */}
+        {/* Action Buttons: Clean 2 rows on mobile (Row 1: AI Studio full-width, Row 2: Export & Save), inline-flex on sm+ screens */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setAiModalOpen(true)}
@@ -890,10 +1211,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               <span>AI Studio</span>
             </button>
 
+            {/* Desktop-only Fonts button */}
             <button
               type="button"
               onClick={() => setFontModalOpen(true)}
-              className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors border ${
+              className={`hidden sm:inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors border ${
                 isFontCustomized
                   ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
                   : "bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-[#F1F5F9]"
@@ -908,19 +1230,19 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-3 sm:gap-2.5 w-full sm:w-auto">
             <ExportMenu
               invoice={invoice}
               elementId="invoice-preview-document"
               className="w-full sm:w-auto"
-              buttonClassName="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none"
+              buttonClassName="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none"
             />
 
             <button
               type="button"
               onClick={() => handleSaveInvoice("sent")}
               disabled={isSaving}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
             >
               <Save className="w-3.5 h-3.5 shrink-0" />
               <span>{isSaving ? "Saving..." : "Save"}</span>
@@ -938,7 +1260,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           }`}
         >
           {/* 0. Business Branding & Logo Card */}
-          <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-3">
+          <div className="bg-white p-4 sm:p-5 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-3.5">
             <div className="flex items-center justify-between pb-2 border-b border-[#F0F0EE]">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A] flex items-center gap-2">
                 <Building2 className="w-3.5 h-3.5 text-[#4468E8]" />
@@ -952,7 +1274,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               </Link>
             </div>
 
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 md:gap-4">
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 {invoice.business?.logoUrl ? (
                   <div className="h-12 w-16 bg-[#FAFAF8] border border-[#E8E8E5] rounded-lg p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
@@ -977,9 +1299,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0 border-t border-[#F5F5F3] sm:border-0 shrink-0">
-                <label className="cursor-pointer inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors">
-                  <Upload className="w-3 h-3 text-[#4468E8]" />
+              <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0 border-t border-[#F5F5F3] md:border-0 shrink-0 w-full md:w-auto">
+                <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors">
+                  <Upload className="w-3.5 h-3.5 text-[#4468E8]" />
                   <span>{invoice.business?.logoUrl ? "Change Logo" : "Upload Logo"}</span>
                   <input
                     type="file"
@@ -994,19 +1316,20 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     <button
                       type="button"
                       onClick={handleEditorReCrop}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#4468E8] rounded-lg text-xs font-medium border border-blue-100 transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#4468E8] rounded-lg text-xs font-medium border border-blue-100 transition-colors"
                       title="Crop and frame logo"
                     >
-                      <CropIcon className="w-3 h-3" />
+                      <CropIcon className="w-3.5 h-3.5" />
                       <span>Crop</span>
                     </button>
                     <button
                       type="button"
                       onClick={handleEditorRemoveLogo}
-                      className="p-1.5 text-neutral-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-xs font-medium transition-colors"
                       title="Remove Logo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
+                      <span>Remove</span>
                     </button>
                   </>
                 )}
@@ -1142,30 +1465,32 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               <label className="block text-xs font-medium text-[#202124] mb-1">
                 Customer <span className="text-red-500">*</span>
               </label>
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
-                <select
-                  value={invoice.customerId || ""}
-                  onChange={(e) => {
-                    const cust = customers.find((c) => c.id === e.target.value);
-                    setInvoice({
-                      ...invoice,
-                      customerId: e.target.value,
-                      customer: cust || null,
-                    });
-                  }}
-                  className="w-full sm:flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white"
-                >
-                  <option value="">-- Choose existing customer --</option>
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.name} {c.companyName ? `(${c.companyName})` : ""}
-                    </option>
-                  ))}
-                </select>
+              <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center w-full">
+                <div className="flex-1 min-w-0 w-full">
+                  <select
+                    value={invoice.customerId || ""}
+                    onChange={(e) => {
+                      const cust = customers.find((c) => c.id === e.target.value);
+                      setInvoice({
+                        ...invoice,
+                        customerId: e.target.value,
+                        customer: cust || null,
+                      });
+                    }}
+                    className="w-full min-w-0 px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-white truncate"
+                  >
+                    <option value="">-- Choose existing customer --</option>
+                    {customers.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.name} {c.companyName ? `(${c.companyName})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                </div>
                 <button
                   type="button"
                   onClick={() => setNewCustomerModal(true)}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shrink-0 shadow-xs transition-colors"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shrink-0 shadow-xs transition-colors whitespace-nowrap"
                   title="Directly create and select a new customer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1216,7 +1541,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 >
                   <div className="flex items-center justify-between gap-1.5 sm:gap-2 min-w-0">
                     <div className="flex-1 min-w-0 flex items-center gap-1.5 sm:gap-2">
-                      <span className="text-[10px] font-mono font-bold text-[#70757A] shrink-0">
+                      <span className="text-[10px] font-mono font-bold text-[#70757A] shrink-0 pl-0.5">
                         #{index + 1}
                       </span>
                       <input
@@ -1243,7 +1568,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                       </button>
                     </div>
 
-                    <div className="flex items-center gap-0.5 sm:gap-1 shrink-0 pl-1">
+                    <div className="flex items-center gap-1 shrink-0 pr-1 sm:pr-0.5">
                       <button
                         type="button"
                         onClick={() => duplicateItem(index)}
@@ -1608,22 +1933,6 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   ))}
                 </select>
               </div>
-
-              {/* Mobile Font Sizes Button in Preview bar */}
-              <button
-                type="button"
-                onClick={() => setFontModalOpen(true)}
-                className={`sm:hidden inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  isFontCustomized
-                    ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
-                    : "bg-[#F8FAFC] text-[#334155] border-[#CBD5E1]"
-                }`}
-                title="Adjust font sizes"
-              >
-                <Type className="w-3.5 h-3.5 text-blue-600" />
-                <span>Fonts</span>
-                {isFontCustomized && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
-              </button>
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-[#F0F0EE] sm:border-0">
@@ -1776,25 +2085,39 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
             <div className="flex items-center gap-2 min-w-0">
               <MoveDiagonal2 className="w-4 h-4 text-blue-600 shrink-0" />
               <p className="truncate sm:whitespace-normal">
-                <strong>Visual Canvas:</strong> Tap the logo or text below to drag-resize directly.
+                <strong>Visual Canvas:</strong> Tap any text, logo, or table to drag-resize or adjust columns (Word-style).
               </p>
             </div>
-            {activeVisualCat ? (
+            {activeSelection ? (
               <button
                 type="button"
-                onClick={() => setActiveVisualCat(null)}
-                className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 shrink-0 transition-colors"
+                onClick={() => setActiveSelection(null)}
+                className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 px-2.5 py-0.5 rounded border border-blue-200 shrink-0 transition-colors shadow-2xs"
               >
                 Done
               </button>
             ) : (
-              <button
-                type="button"
-                onClick={() => setActiveVisualCat("logo")}
-                className="text-[11px] font-medium text-blue-700 hover:underline shrink-0"
-              >
-                Select Logo
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveSelection({ type: "table", key: "table", label: "Invoice Table" })
+                  }
+                  className="text-[11px] font-medium text-blue-700 hover:underline"
+                >
+                  Table
+                </button>
+                <span className="text-blue-300">|</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setActiveSelection({ type: "logo", key: "logo", label: "Business Logo" })
+                  }
+                  className="text-[11px] font-medium text-blue-700 hover:underline"
+                >
+                  Logo
+                </button>
+              </div>
             )}
           </div>
 
@@ -1825,10 +2148,38 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     invoice={invoice}
                     templateId={invoice.templateId}
                     fontSizeConfig={invoice.fontSizeConfig}
+                    tableConfig={invoice.tableConfig}
                   />
 
+                  {/* Draggable Column Boundary Dividers (MS Word Style) */}
+                  {columnDividers.map((div) => (
+                    <div
+                      key={div.index}
+                      style={{
+                        left: `${div.left - 6}px`,
+                        top: `${div.top}px`,
+                        height: `${div.height}px`,
+                        width: "12px",
+                      }}
+                      onPointerDown={(e) => handleColumnDividerPointerDown(e, div.index)}
+                      className="group absolute z-30 cursor-col-resize select-none touch-none flex items-stretch justify-center"
+                      title="Drag to resize column (MS Word style)"
+                    >
+                      <div
+                        className={`w-[2px] h-full transition-all ${
+                          isDraggingDivider && draggingDividerIndex === div.index
+                            ? "bg-blue-600 w-[3px]"
+                            : "bg-blue-400/30 group-hover:bg-blue-600 group-hover:w-[3px]"
+                        }`}
+                      />
+                      <div className="absolute -top-3 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-sm transition-opacity">
+                        <span className="text-[9px] font-bold">⬌</span>
+                      </div>
+                    </div>
+                  ))}
+
                   {/* Visual Bounding Box & Interactive Corner Drag Handle */}
-                  {activeVisualCat && selectedBox && (
+                  {activeSelection && selectedBox && (
                     <div
                       style={{
                         top: `${selectedBox.top}px`,
@@ -1857,12 +2208,10 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                       </div>
 
                       {/* Floating Badge Indicator */}
-                      <div className="pointer-events-auto absolute -top-7 left-0 bg-blue-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5">
-                        <span>
-                          {FONT_CATEGORIES.find((c) => c.key === activeVisualCat)?.label}
-                        </span>
+                      <div className="pointer-events-auto absolute -top-7 left-0 bg-blue-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5 truncate max-w-[260px]">
+                        <span>{activeSelection.label}</span>
                         <span className="opacity-90 font-mono">
-                          {Math.round((invoice.fontSizeConfig?.[activeVisualCat] || 1.0) * 100)}%
+                          {Math.round(getActiveScale() * 100)}%
                         </span>
                       </div>
                     </div>
@@ -1873,32 +2222,36 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
 
           {/* Floating Mobile/Desktop Tactile Drag Bar for Active Selection */}
-          {activeVisualCat && (
-            <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md border-2 border-blue-600/30 shadow-elevated rounded-2xl p-3.5 space-y-2 max-w-lg mx-auto animate-in slide-in-from-bottom-4 duration-150">
+          {activeSelection && (
+            <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md border-2 border-blue-600/30 shadow-elevated rounded-2xl p-3.5 space-y-2.5 max-w-lg mx-auto animate-in slide-in-from-bottom-4 duration-150">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
-                    <MoveDiagonal2 className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                    {activeSelection.type === "table" ? (
+                      <TableIcon className="w-3.5 h-3.5" />
+                    ) : (
+                      <MoveDiagonal2 className="w-3.5 h-3.5" />
+                    )}
                   </div>
-                  <span className="text-xs font-bold text-[#0F172A]">
-                    {FONT_CATEGORIES.find((c) => c.key === activeVisualCat)?.label}
+                  <span className="text-xs font-bold text-[#0F172A] truncate">
+                    {activeSelection.label}
                   </span>
-                  <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
-                    {Math.round((invoice.fontSizeConfig?.[activeVisualCat] || 1.0) * 100)}%
+                  <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200 shrink-0">
+                    {Math.round(getActiveScale() * 100)}%
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     type="button"
-                    onClick={() => handleSetCategoryScale(activeVisualCat, 1.0)}
+                    onClick={handleResetActiveScale}
                     className="text-[11px] font-medium text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded hover:bg-slate-100 transition-colors"
                   >
                     Reset
                   </button>
                   <button
                     type="button"
-                    onClick={() => setActiveVisualCat(null)}
+                    onClick={() => setActiveSelection(null)}
                     className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
                     title="Deselect"
                   >
@@ -1907,11 +2260,53 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 </div>
               </div>
 
+              {/* Table-Specific Word Controls */}
+              {activeSelection.type === "table" && (
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between gap-1 text-xs">
+                    <span className="text-[11px] font-medium text-slate-600">Row Density:</span>
+                    <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+                      {(["compact", "normal", "relaxed"] as const).map((density) => (
+                        <button
+                          key={density}
+                          type="button"
+                          onClick={() => handleSetRowDensity(density)}
+                          className={`px-2 py-0.5 text-[10px] font-medium rounded-md transition-all ${
+                            (invoice.tableConfig?.rowDensity || "normal") === density
+                              ? "bg-white text-blue-700 shadow-2xs font-bold"
+                              : "text-slate-600 hover:text-slate-900"
+                          }`}
+                        >
+                          {density === "compact" ? "Compact" : density === "relaxed" ? "Spacious" : "Normal"}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleDistributeColumnsEvenly}
+                      className="text-[11px] font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 px-2.5 py-1 rounded-lg transition-colors inline-flex items-center gap-1"
+                    >
+                      <span>Distribute Columns Evenly</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResetTableConfig}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 transition-colors"
+                    >
+                      Reset Widths
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Tactile Drag Scrubber Track */}
               <div className="flex items-center gap-2.5 pt-0.5">
                 <button
                   type="button"
-                  onClick={() => handleUpdateFontSize(activeVisualCat, -0.05)}
+                  onClick={() => handleUpdateActiveScale(-0.05)}
                   className="h-8 w-8 min-w-[32px] flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700"
                   title="Decrease"
                 >
@@ -1922,19 +2317,17 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   <input
                     type="range"
                     min="0.55"
-                    max="2.0"
+                    max="2.1"
                     step="0.05"
-                    value={invoice.fontSizeConfig?.[activeVisualCat] || 1.0}
-                    onChange={(e) =>
-                      handleSetCategoryScale(activeVisualCat, parseFloat(e.target.value))
-                    }
+                    value={getActiveScale()}
+                    onChange={(e) => handleSetActiveScale(parseFloat(e.target.value))}
                     className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   />
                 </div>
 
                 <button
                   type="button"
-                  onClick={() => handleUpdateFontSize(activeVisualCat, 0.05)}
+                  onClick={() => handleUpdateActiveScale(0.05)}
                   className="h-8 w-8 min-w-[32px] flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700"
                   title="Increase"
                 >
@@ -1945,16 +2338,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               {/* Quick Presets */}
               <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100">
                 <span className="text-[10px] text-slate-400">
-                  💡 Drag corner on canvas or slide above
+                  💡 Drag corner handle or slide above
                 </span>
                 <div className="flex items-center gap-1">
-                  {[0.85, 1.0, 1.25, 1.5].map((scale) => (
+                  {[0.8, 1.0, 1.25, 1.5].map((scale) => (
                     <button
                       key={scale}
                       type="button"
-                      onClick={() => handleSetCategoryScale(activeVisualCat, scale)}
+                      onClick={() => handleSetActiveScale(scale)}
                       className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${
-                        (invoice.fontSizeConfig?.[activeVisualCat] || 1.0) === scale
+                        Math.abs(getActiveScale() - scale) < 0.02
                           ? "bg-blue-600 text-white font-bold"
                           : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                       }`}
