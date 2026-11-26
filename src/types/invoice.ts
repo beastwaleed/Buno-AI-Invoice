@@ -39,6 +39,9 @@ export interface BusinessProfileData {
   businessName: string;
   ownerName?: string | null;
   logoUrl?: string | null;
+  originalLogoUrl?: string | null;
+  transparentLogoUrl?: string | null;
+  removeLogoBackground?: boolean;
   address?: string | null;
   phone?: string | null;
   email?: string | null;
@@ -106,6 +109,9 @@ export interface InvoiceData {
   balanceDue: number;
   notes?: string | null;
   paymentTerms?: string | null;
+  removeLogoBackground?: boolean;
+  transparentLogoUrl?: string | null;
+  originalLogoUrl?: string | null;
 
   business: BusinessProfileData;
   customer?: CustomerData | null;

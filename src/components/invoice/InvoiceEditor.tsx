@@ -27,6 +27,7 @@ import {
   X,
   MoveDiagonal2,
   Table as TableIcon,
+  Wand2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -36,6 +37,8 @@ import { ExportMenu } from "@/components/ExportMenu";
 import Link from "next/link";
 import { useQueryClient } from "@tanstack/react-query";
 import { ImageCropModal } from "@/components/common/ImageCropModal";
+import { LogoBackgroundModal } from "@/components/common/LogoBackgroundModal";
+import { removeLogoBackground } from "@/lib/removeBackground";
 import { CURRENCIES } from "@/lib/currencies";
 import { VoiceAssistantButton } from "@/components/invoice/VoiceAssistantButton";
 
@@ -290,10 +293,24 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           rowDensity: "normal",
           fontSize: 1.0,
         },
+        removeLogoBackground: Boolean(
+          initialInvoice.removeLogoBackground ?? initialInvoice.business?.removeLogoBackground
+        ),
+        transparentLogoUrl:
+          initialInvoice.transparentLogoUrl || initialInvoice.business?.transparentLogoUrl || null,
+        originalLogoUrl:
+          initialInvoice.originalLogoUrl || initialInvoice.business?.originalLogoUrl || initialInvoice.business?.logoUrl || null,
         business: {
           ...initialInvoice.business,
           businessName: initialInvoice.business?.businessName || businessProfile?.businessName || "My Business",
           logoUrl: initialInvoice.business?.logoUrl || businessProfile?.logoUrl || "",
+          removeLogoBackground: Boolean(
+            initialInvoice.removeLogoBackground ?? initialInvoice.business?.removeLogoBackground
+          ),
+          transparentLogoUrl:
+            initialInvoice.transparentLogoUrl || initialInvoice.business?.transparentLogoUrl || null,
+          originalLogoUrl:
+            initialInvoice.originalLogoUrl || initialInvoice.business?.originalLogoUrl || initialInvoice.business?.logoUrl || null,
         },
       };
     }
@@ -335,6 +352,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         rowDensity: "normal",
         fontSize: 1.0,
       },
+      removeLogoBackground: Boolean(businessProfile?.removeLogoBackground),
+      transparentLogoUrl: businessProfile?.transparentLogoUrl || null,
+      originalLogoUrl: businessProfile?.logoUrl || null,
       status: "draft",
       invoiceDate: new Date().toISOString().split("T")[0],
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
@@ -354,6 +374,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         businessName: businessProfile?.businessName || "My Business",
         logoUrl: businessProfile?.logoUrl || "",
         email: businessProfile?.email || "billing@example.com",
+        removeLogoBackground: Boolean(businessProfile?.removeLogoBackground),
+        transparentLogoUrl: businessProfile?.transparentLogoUrl || null,
+        originalLogoUrl: businessProfile?.logoUrl || null,
       },
       customer: customers[0] || null,
       customerId: customers[0]?.id || "",
@@ -858,9 +881,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         const newLogoUrl = data.url;
         setInvoice((prev) => ({
           ...prev,
+          originalLogoUrl: newLogoUrl,
+          transparentLogoUrl: null,
           business: {
             ...prev.business,
             logoUrl: newLogoUrl,
+            originalLogoUrl: newLogoUrl,
+            transparentLogoUrl: null,
           },
         }));
 
@@ -889,9 +916,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const handleEditorRemoveLogo = async () => {
     setInvoice((prev) => ({
       ...prev,
+      transparentLogoUrl: null,
+      originalLogoUrl: null,
+      removeLogoBackground: false,
       business: {
         ...prev.business,
         logoUrl: "",
+        transparentLogoUrl: null,
+        originalLogoUrl: null,
+        removeLogoBackground: false,
       },
     }));
 
@@ -908,6 +941,118 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     } catch {
       // Ignored
     }
+  };
+
+  // Logo Background Removal State & Handlers
+  const [logoBgModalOpen, setLogoBgModalOpen] = useState(false);
+  const [isRemovingBg, setIsRemovingBg] = useState(false);
+
+  const handleOpenLogoBgModal = () => {
+    const targetUrl = invoice.originalLogoUrl || invoice.business?.originalLogoUrl || invoice.business?.logoUrl;
+    if (!targetUrl) {
+      toast.error("Please upload a logo first");
+      return;
+    }
+    setLogoBgModalOpen(true);
+  };
+
+  const handleToggleLogoBackground = async (forceState?: boolean) => {
+    const targetUrl = invoice.originalLogoUrl || invoice.business?.originalLogoUrl || invoice.business?.logoUrl;
+    if (!targetUrl) {
+      toast.error("Please upload a logo first");
+      return;
+    }
+
+    const nextState = forceState !== undefined ? forceState : !invoice.removeLogoBackground;
+
+    // If enabling and we don't have transparentLogoUrl yet, automatically remove background
+    if (nextState && !invoice.transparentLogoUrl) {
+      setIsRemovingBg(true);
+      const bgToast = toast.loading("Removing logo background with AI/Canvas...");
+      try {
+        const result = await removeLogoBackground(targetUrl, {
+          tolerance: 22,
+          method: "flood",
+          feather: true,
+        });
+
+        setInvoice((prev) => ({
+          ...prev,
+          removeLogoBackground: true,
+          transparentLogoUrl: result.dataUrl,
+          originalLogoUrl: prev.originalLogoUrl || targetUrl,
+          business: {
+            ...prev.business,
+            removeLogoBackground: true,
+            transparentLogoUrl: result.dataUrl,
+            originalLogoUrl: prev.originalLogoUrl || targetUrl,
+          },
+        }));
+        toast.success("Logo background removed for this template!", { id: bgToast });
+      } catch (err) {
+        console.error("Auto background removal error:", err);
+        // Fallback: still enable the flag so CSS transparency applies
+        setInvoice((prev) => ({
+          ...prev,
+          removeLogoBackground: true,
+          business: {
+            ...prev.business,
+            removeLogoBackground: true,
+          },
+        }));
+        toast.info("Transparent logo mode activated for this template.", { id: bgToast });
+      } finally {
+        setIsRemovingBg(false);
+      }
+      return;
+    }
+
+    setInvoice((prev) => ({
+      ...prev,
+      removeLogoBackground: nextState,
+      business: {
+        ...prev.business,
+        removeLogoBackground: nextState,
+      },
+    }));
+
+    if (nextState) {
+      toast.success("Transparent logo enabled for this template.");
+    } else {
+      toast.info("Original logo background restored.");
+    }
+  };
+
+  const handleApplyTransparentLogo = async (result: {
+    dataUrl: string;
+    file: File;
+    tolerance: number;
+    method: "flood" | "chroma";
+  }) => {
+    const original = invoice.originalLogoUrl || invoice.business?.originalLogoUrl || invoice.business?.logoUrl;
+    setInvoice((prev) => ({
+      ...prev,
+      removeLogoBackground: true,
+      transparentLogoUrl: result.dataUrl,
+      originalLogoUrl: original,
+      business: {
+        ...prev.business,
+        removeLogoBackground: true,
+        transparentLogoUrl: result.dataUrl,
+        originalLogoUrl: original,
+      },
+    }));
+  };
+
+  const handleRestoreOriginalLogo = () => {
+    setInvoice((prev) => ({
+      ...prev,
+      removeLogoBackground: false,
+      business: {
+        ...prev.business,
+        removeLogoBackground: false,
+      },
+    }));
   };
 
   // Item handlers
@@ -1347,12 +1492,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               </Link>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3.5 md:gap-4">
-              <div className="flex items-center gap-3 min-w-0 flex-1">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3 min-w-0">
                 {invoice.business?.logoUrl ? (
                   <div className="h-12 w-16 bg-[#FAFAF8] border border-[#E8E8E5] rounded-lg p-1 flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
                     <img
-                      src={invoice.business.logoUrl}
+                      src={
+                        invoice.removeLogoBackground && invoice.transparentLogoUrl
+                          ? invoice.transparentLogoUrl
+                          : invoice.business.logoUrl
+                      }
                       alt={invoice.business?.businessName || "Company Logo"}
                       className="max-h-full max-w-full object-contain"
                     />
@@ -1362,7 +1511,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     <Upload className="w-5 h-5 opacity-60" />
                   </div>
                 )}
-                <div className="min-w-0 flex-1">
+                <div className="min-w-0">
                   <p className="font-semibold text-xs text-[#202124] truncate">
                     {invoice.business?.businessName || "My Business"}
                   </p>
@@ -1372,10 +1521,10 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-2 md:pt-0 border-t border-[#F5F5F3] md:border-0 shrink-0 w-full md:w-auto">
-                <label className="flex-1 md:flex-initial cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors whitespace-nowrap">
+              <div className="flex flex-wrap items-center gap-1.5 pt-2 sm:pt-0 border-t border-[#F5F5F3] sm:border-0 shrink-0">
+                <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors whitespace-nowrap">
                   <Upload className="w-3.5 h-3.5 text-[#4468E8]" />
-                  <span>{invoice.business?.logoUrl ? "Change Logo" : "Upload Logo"}</span>
+                  <span>{invoice.business?.logoUrl ? "Change" : "Upload Logo"}</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -1397,17 +1546,77 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     </button>
                     <button
                       type="button"
+                      onClick={handleOpenLogoBgModal}
+                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-medium border border-purple-100 transition-colors shrink-0"
+                      title="Remove background and make logo transparent"
+                    >
+                      <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+                      <span>Remove BG</span>
+                    </button>
+                    <button
+                      type="button"
                       onClick={handleEditorRemoveLogo}
-                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-xs font-medium transition-colors shrink-0"
+                      className="inline-flex items-center justify-center p-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-xs font-medium transition-colors shrink-0"
                       title="Remove Logo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
-                      <span>Remove</span>
                     </button>
                   </>
                 )}
               </div>
             </div>
+
+            {/* Remove Logo Background Switch */}
+            {invoice.business?.logoUrl && (
+              <div className="flex items-center justify-between pt-2.5 border-t border-[#F5F5F3]">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
+                    <Wand2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-medium text-[#202124]">
+                        Remove Logo Background
+                      </span>
+                      {invoice.removeLogoBackground && (
+                        <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/50">
+                          Transparent Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#70757A]">
+                      Strip solid background for clean display on any invoice template
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={handleOpenLogoBgModal}
+                    className="text-[11px] font-medium text-purple-700 hover:underline px-1.5 py-0.5"
+                  >
+                    Fine-tune
+                  </button>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={Boolean(invoice.removeLogoBackground)}
+                    onClick={() => handleToggleLogoBackground()}
+                    disabled={isRemovingBg}
+                    className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      invoice.removeLogoBackground ? "bg-[#4468E8]" : "bg-slate-200"
+                    } ${isRemovingBg ? "opacity-50 cursor-wait" : ""}`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        invoice.removeLogoBackground ? "translate-x-4" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 1. General Invoice Metadata Card */}
@@ -1880,6 +2089,34 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               </select>
             </div>
 
+            {/* Template-specific Logo Transparency Quick Toggle */}
+            {invoice.business?.logoUrl && (
+              <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#FAFAF8] border border-[#E8E8E5]">
+                <div className="flex items-center gap-2">
+                  <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+                  <div>
+                    <span className="text-xs font-medium text-[#202124]">
+                      Transparent Logo for this Template
+                    </span>
+                    <p className="text-[10px] text-[#70757A]">
+                      Remove logo background specifically for {TEMPLATE_LIST.find((t) => t.slug === invoice.templateId)?.name || "this template"}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleLogoBackground()}
+                  className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                    invoice.removeLogoBackground
+                      ? "bg-purple-600 text-white shadow-xs"
+                      : "bg-white text-[#70757A] border border-[#E8E8E5] hover:bg-slate-50"
+                  }`}
+                >
+                  {invoice.removeLogoBackground ? "Enabled" : "Disabled"}
+                </button>
+              </div>
+            )}
+
             {/* Category Font Controls */}
             <div className="space-y-3 pt-1">
               <div className="flex items-center justify-between">
@@ -2006,6 +2243,25 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   ))}
                 </select>
               </div>
+
+              {invoice.business?.logoUrl && (
+                <button
+                  type="button"
+                  onClick={() => handleToggleLogoBackground()}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium border transition-all shrink-0 ${
+                    invoice.removeLogoBackground
+                      ? "bg-purple-50 text-purple-700 border-purple-200 shadow-2xs font-semibold"
+                      : "bg-[#FAFAF8] text-[#70757A] border-[#E8E8E5] hover:bg-slate-100"
+                  }`}
+                  title="Remove logo background for this template"
+                >
+                  <Wand2 className="w-3 h-3 text-purple-600" />
+                  <span className="hidden xs:inline">Transparent Logo:</span>
+                  <span className="text-[11px]">
+                    {invoice.removeLogoBackground ? "ON" : "OFF"}
+                  </span>
+                </button>
+              )}
             </div>
 
             <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-[#F0F0EE] sm:border-0">
@@ -2358,6 +2614,36 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Logo-Specific Smart Transparency Controls */}
+              {activeSelection.type === "logo" && invoice.business?.logoUrl && (
+                <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                  <div className="flex items-center gap-1.5 text-xs text-slate-700">
+                    <Wand2 className="w-3.5 h-3.5 text-purple-600" />
+                    <span className="font-medium">Transparent Background:</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={handleOpenLogoBgModal}
+                      className="text-[11px] font-medium text-purple-600 hover:underline px-1.5 py-0.5"
+                    >
+                      Fine-tune
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLogoBackground()}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all ${
+                        invoice.removeLogoBackground
+                          ? "bg-purple-600 text-white shadow-xs"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {invoice.removeLogoBackground ? "Active (ON)" : "OFF"}
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Table-Specific Word Controls */}
               {activeSelection.type === "table" && (
@@ -2816,6 +3102,22 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         onApplyCrop={handleEditorApplyCroppedLogo}
         title="Crop & Frame Business Logo"
       />
+
+      {/* Smart Logo Background Removal Modal */}
+      {(invoice.originalLogoUrl || invoice.business?.originalLogoUrl || invoice.business?.logoUrl) && (
+        <LogoBackgroundModal
+          isOpen={logoBgModalOpen}
+          imageSrc={
+            invoice.originalLogoUrl ||
+            invoice.business?.originalLogoUrl ||
+            invoice.business?.logoUrl ||
+            ""
+          }
+          onClose={() => setLogoBgModalOpen(false)}
+          onApplyTransparentLogo={handleApplyTransparentLogo}
+          onRestoreOriginal={handleRestoreOriginalLogo}
+        />
+      )}
 
       {/* Mobile/Responsive Font Sizes Modal & Bottom Sheet */}
       {fontModalOpen && (

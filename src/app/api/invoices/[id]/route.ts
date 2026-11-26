@@ -102,6 +102,9 @@ export async function PUT(
       } catch {}
       if (fontSizeConfig) snap.fontSizeConfig = fontSizeConfig;
       if (tableConfig) snap.tableConfig = tableConfig;
+      if (body.removeLogoBackground !== undefined) snap.removeLogoBackground = body.removeLogoBackground;
+      if (body.transparentLogoUrl !== undefined) snap.transparentLogoUrl = body.transparentLogoUrl;
+      if (body.originalLogoUrl !== undefined) snap.originalLogoUrl = body.originalLogoUrl;
 
       return tx.invoice.update({
         where: { id: params.id, userId: user.id },

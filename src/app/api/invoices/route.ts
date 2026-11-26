@@ -143,10 +143,21 @@ export async function POST(req: NextRequest) {
         notes,
         paymentTerms,
         businessSnapshot: profile
-          ? JSON.stringify({ ...profile, fontSizeConfig, tableConfig })
-          : fontSizeConfig || tableConfig
-          ? JSON.stringify({ fontSizeConfig, tableConfig })
-          : null,
+          ? JSON.stringify({
+              ...profile,
+              fontSizeConfig,
+              tableConfig,
+              removeLogoBackground: body.removeLogoBackground,
+              transparentLogoUrl: body.transparentLogoUrl,
+              originalLogoUrl: body.originalLogoUrl,
+            })
+          : JSON.stringify({
+              fontSizeConfig,
+              tableConfig,
+              removeLogoBackground: body.removeLogoBackground,
+              transparentLogoUrl: body.transparentLogoUrl,
+              originalLogoUrl: body.originalLogoUrl,
+            }),
         customerSnapshot: customerSnapshot ? JSON.stringify(customerSnapshot) : null,
         items: {
           create: processedItems,

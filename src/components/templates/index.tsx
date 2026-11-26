@@ -134,27 +134,42 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
     `)
     .join("\n");
 
+  const isTransparentLogo = Boolean(
+    invoice.removeLogoBackground || invoice.business?.removeLogoBackground
+  );
+  const activeLogoUrl = isTransparentLogo
+    ? invoice.transparentLogoUrl || invoice.business?.transparentLogoUrl || invoice.business?.logoUrl
+    : invoice.originalLogoUrl || invoice.business?.originalLogoUrl || invoice.business?.logoUrl;
+
+  const effectiveInvoice: InvoiceData = {
+    ...invoice,
+    business: {
+      ...invoice.business,
+      logoUrl: activeLogoUrl,
+    },
+  };
+
   const renderTemplateContent = () => {
     switch (selectedTemplate.toLowerCase()) {
       case "minimal":
-        return <MinimalTemplate invoice={invoice} accentColor={accentColor} />;
+        return <MinimalTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "corporate":
-        return <CorporateTemplate invoice={invoice} accentColor={accentColor} />;
+        return <CorporateTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "compact":
-        return <CompactTemplate invoice={invoice} accentColor={accentColor} />;
+        return <CompactTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "wave":
-        return <WaveTemplate invoice={invoice} accentColor={accentColor} />;
+        return <WaveTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "amber-grid":
-        return <AmberGridTemplate invoice={invoice} accentColor={accentColor} />;
+        return <AmberGridTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "crimson":
-        return <CrimsonTemplate invoice={invoice} accentColor={accentColor} />;
+        return <CrimsonTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "royal-blue":
-        return <RoyalBlueTemplate invoice={invoice} accentColor={accentColor} />;
+        return <RoyalBlueTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "agency-sidebar":
-        return <AgencySidebarTemplate invoice={invoice} accentColor={accentColor} />;
+        return <AgencySidebarTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
       case "classic":
       default:
-        return <ClassicTemplate invoice={invoice} accentColor={accentColor} />;
+        return <ClassicTemplate invoice={effectiveInvoice} accentColor={accentColor} />;
     }
   };
 
@@ -198,6 +213,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
               max-width: calc(20rem * var(--logo-scale, 1)) !important;
               object-fit: contain !important;
               transition: height 0.08s ease-out, max-height 0.08s ease-out;
+              ${isTransparentLogo ? "background-color: transparent !important;" : ""}
             }
 
             /* Category fallback scaling */

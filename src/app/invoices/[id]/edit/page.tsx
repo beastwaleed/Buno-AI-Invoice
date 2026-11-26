@@ -50,6 +50,9 @@ export default async function EditInvoicePage({
     ...invoice,
     fontSizeConfig: parsedBusinessSnapshot.fontSizeConfig || undefined,
     tableConfig: parsedBusinessSnapshot.tableConfig || undefined,
+    removeLogoBackground: parsedBusinessSnapshot.removeLogoBackground,
+    transparentLogoUrl: parsedBusinessSnapshot.transparentLogoUrl,
+    originalLogoUrl: parsedBusinessSnapshot.originalLogoUrl,
     invoiceDate: invoice.invoiceDate.toISOString().split("T")[0],
     dueDate: invoice.dueDate.toISOString().split("T")[0],
     business: {
