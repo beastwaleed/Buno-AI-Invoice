@@ -24,6 +24,7 @@ import {
   Type,
   RotateCcw,
   Sliders,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -35,6 +36,33 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ImageCropModal } from "@/components/common/ImageCropModal";
 import { CURRENCIES } from "@/lib/currencies";
 import { VoiceAssistantButton } from "@/components/invoice/VoiceAssistantButton";
+
+export const FONT_CATEGORIES = [
+  {
+    key: "header" as const,
+    label: "Header & Title",
+    sub: "Invoice title, company name, invoice #",
+    presets: [1.0, 1.15, 1.3, 1.5],
+  },
+  {
+    key: "body" as const,
+    label: "Body & Addresses",
+    sub: "Billed to, dates, metadata, contact info",
+    presets: [0.9, 1.0, 1.15, 1.3],
+  },
+  {
+    key: "table" as const,
+    label: "Table & Items",
+    sub: "Line item descriptions, rates, totals",
+    presets: [0.9, 1.0, 1.15, 1.3],
+  },
+  {
+    key: "total" as const,
+    label: "Totals & Summary",
+    sub: "Subtotal, tax, balance due, terms",
+    presets: [0.9, 1.0, 1.15, 1.3],
+  },
+];
 
 interface InvoiceEditorProps {
   initialInvoice?: InvoiceData;
@@ -61,6 +89,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
   const [fontPanelOpen, setFontPanelOpen] = useState(false);
+  const [fontModalOpen, setFontModalOpen] = useState(false);
 
   const handleUpdateFontSize = (
     category: "header" | "body" | "table" | "total",
@@ -220,6 +249,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       items: defaultItems,
     };
   });
+
+  const isFontCustomized =
+    Boolean(invoice.fontSizeConfig) &&
+    ((invoice.fontSizeConfig?.header ?? 1.0) !== 1.0 ||
+      (invoice.fontSizeConfig?.body ?? 1.0) !== 1.0 ||
+      (invoice.fontSizeConfig?.table ?? 1.0) !== 1.0 ||
+      (invoice.fontSizeConfig?.total ?? 1.0) !== 1.0);
 
   // Recompute deterministic totals on any item or tax/discount change
   const recalculate = (
@@ -709,15 +745,32 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: 3-column grid on mobile, inline-flex on sm+ screens */}
-        <div className="grid grid-cols-3 sm:flex items-center gap-2 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
+        {/* Action Buttons: 4-column grid on mobile, inline-flex on sm+ screens */}
+        <div className="grid grid-cols-4 sm:flex items-center gap-1.5 sm:gap-2 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
           <button
             type="button"
             onClick={() => setAiModalOpen(true)}
-            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-medium text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+            className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
           >
             <Sparkles className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">AI Studio</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setFontModalOpen(true)}
+            className={`inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium rounded-lg transition-colors border ${
+              isFontCustomized
+                ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
+                : "bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+            }`}
+            title="Adjust font size for each text category on the invoice"
+          >
+            <Type className="w-3.5 h-3.5 shrink-0 text-blue-600" />
+            <span className="truncate">Fonts</span>
+            {isFontCustomized && (
+              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+            )}
           </button>
 
           <ExportMenu invoice={invoice} elementId="invoice-preview-document" className="w-full sm:w-auto" />
@@ -726,7 +779,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
             type="button"
             onClick={() => handleSaveInvoice("sent")}
             disabled={isSaving}
-            className="inline-flex items-center justify-center gap-1.5 px-2.5 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
           >
             <Save className="w-3.5 h-3.5 shrink-0" />
             <span className="truncate">{isSaving ? "Saving..." : "Save"}</span>
@@ -1246,6 +1299,145 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               />
             </div>
           </div>
+
+          {/* Template & Category Typography Card (Available directly in Form for Mobile & Desktop) */}
+          <div className="bg-white p-5 rounded-xl border border-[#E8E8E5] shadow-subtle space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-[#F0F0EE]">
+              <div className="flex items-center gap-2">
+                <Palette className="w-4 h-4 text-[#4468E8]" />
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-[#70757A]">
+                  Template & Font Sizing
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetFontSizes}
+                className="inline-flex items-center gap-1 text-[11px] font-medium text-[#64748B] hover:text-[#0F172A] transition-colors"
+                title="Reset all font sizes to 100%"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>Reset Sizes</span>
+              </button>
+            </div>
+
+            {/* Template Selector inside Form */}
+            <div>
+              <label className="block text-xs font-medium text-[#202124] mb-1.5">
+                Invoice Template Design
+              </label>
+              <select
+                value={invoice.templateId}
+                onChange={(e) =>
+                  setInvoice({ ...invoice, templateId: e.target.value as TemplateId })
+                }
+                className="w-full px-3 py-2 text-xs font-medium rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+              >
+                {TEMPLATE_LIST.map((tpl) => (
+                  <option key={tpl.slug} value={tpl.slug}>
+                    {tpl.name} — {tpl.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Font Controls */}
+            <div className="space-y-3 pt-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Type className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="text-xs font-bold text-[#0F172A]">
+                    Category Font Sizes
+                  </span>
+                  {isFontCustomized && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-semibold bg-blue-50 text-blue-700 rounded-full border border-blue-200">
+                      Customized
+                    </span>
+                  )}
+                </div>
+                <span className="text-[10px] text-[#70757A]">
+                  Scale each section independently
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {FONT_CATEGORIES.map((cat) => {
+                  const currentScale = invoice.fontSizeConfig?.[cat.key] || 1.0;
+                  return (
+                    <div
+                      key={cat.key}
+                      className="p-3 sm:p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-xs text-[#0F172A] block">
+                            {cat.label}
+                          </span>
+                          <span className="text-[10px] text-[#64748B]">
+                            {cat.sub}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded-md border border-[#E2E8F0] shadow-2xs">
+                          {Math.round(currentScale * 100)}%
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateFontSize(cat.key, -0.1)}
+                            className="h-8 w-9 min-h-[32px] min-w-[36px] flex items-center justify-center rounded-lg bg-white border border-[#CBD5E1] text-sm font-bold active:bg-blue-100 text-[#0F172A] shadow-2xs transition-colors"
+                            title={`Decrease ${cat.label} font size`}
+                          >
+                            −
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdateFontSize(cat.key, 0.1)}
+                            className="h-8 w-9 min-h-[32px] min-w-[36px] flex items-center justify-center rounded-lg bg-white border border-[#CBD5E1] text-sm font-bold active:bg-blue-100 text-[#0F172A] shadow-2xs transition-colors"
+                            title={`Increase ${cat.label} font size`}
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-1 ml-auto">
+                          {cat.presets.map((scale) => (
+                            <button
+                              key={scale}
+                              type="button"
+                              onClick={() => handleSetCategoryScale(cat.key, scale)}
+                              className={`px-2 py-1 rounded-md text-[11px] font-mono transition-colors shadow-2xs ${
+                                currentScale === scale
+                                  ? "bg-blue-600 text-white font-bold"
+                                  : "bg-white text-[#64748B] border border-[#CBD5E1] hover:bg-[#F1F5F9] active:bg-blue-50"
+                              }`}
+                            >
+                              {Math.round(scale * 100)}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Quick switch to preview on mobile */}
+              <div className="pt-2 flex items-center justify-between">
+                <span className="text-[11px] text-[#64748B]">
+                  Scales persist in PDF exports & live previews
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("preview")}
+                  className="inline-flex lg:hidden items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#EEF2FF] text-[#4468E8] hover:bg-blue-100 transition-colors"
+                >
+                  <span>See Live Preview →</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Right Column: Live Invoice Preview */}
@@ -1255,89 +1447,106 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           }`}
         >
           {/* Template Selector & Zoom Bar */}
-          <div className="bg-white p-3.5 rounded-xl border border-[#E8E8E5] shadow-subtle flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Palette className="w-4 h-4 text-[#4468E8]" />
-              <span className="text-xs font-medium text-[#202124]">Template:</span>
-              <select
-                value={invoice.templateId}
-                onChange={(e) =>
-                  setInvoice({ ...invoice, templateId: e.target.value as TemplateId })
-                }
-                className="px-2.5 py-1 text-xs font-medium rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-1 focus:ring-[#4468E8]"
-              >
-                {TEMPLATE_LIST.map((tpl) => (
-                  <option key={tpl.slug} value={tpl.slug}>
-                    {tpl.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+          <div className="bg-white p-3.5 rounded-xl border border-[#E8E8E5] shadow-subtle flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto">
+              <div className="flex items-center gap-2 min-w-0">
+                <Palette className="w-4 h-4 text-[#4468E8] shrink-0" />
+                <span className="text-xs font-medium text-[#202124] shrink-0">Template:</span>
+                <select
+                  value={invoice.templateId}
+                  onChange={(e) =>
+                    setInvoice({ ...invoice, templateId: e.target.value as TemplateId })
+                  }
+                  className="px-2.5 py-1 text-xs font-medium rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-1 focus:ring-[#4468E8] max-w-[150px] sm:max-w-none truncate"
+                >
+                  {TEMPLATE_LIST.map((tpl) => (
+                    <option key={tpl.slug} value={tpl.slug}>
+                      {tpl.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
 
-            {/* Zoom Controls */}
-            <div className="flex items-center gap-1">
+              {/* Mobile Font Sizes Button in Preview bar */}
               <button
                 type="button"
-                onClick={() => setZoomLevel((z) => Math.max(35, z - 10))}
-                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
-                title="Zoom Out"
-              >
-                <ZoomOut className="w-3.5 h-3.5" />
-              </button>
-              <span className="text-[11px] font-mono font-medium text-[#70757A] w-9 text-center">
-                {zoomLevel}%
-              </span>
-              <button
-                type="button"
-                onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
-                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
-                title="Zoom In"
-              >
-                <ZoomIn className="w-3.5 h-3.5" />
-              </button>
-              <button
-                type="button"
-                onClick={handleFitScreen}
-                className="px-2 py-1 text-[11px] font-medium text-[#4468E8] hover:bg-[#EEF2FF] rounded transition-colors"
-                title="Fit to Screen"
-              >
-                Fit
-              </button>
-              <button
-                type="button"
-                onClick={() => setZoomLevel(100)}
-                className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
-                title="100% Size"
-              >
-                <Maximize2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-
-            {/* Font Sizes Toggle Button */}
-            <div className="flex items-center gap-1 border-l border-[#E8E8E5] pl-2">
-              <button
-                type="button"
-                onClick={() => setFontPanelOpen(!fontPanelOpen)}
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
-                  fontPanelOpen
+                onClick={() => setFontModalOpen(true)}
+                className={`sm:hidden inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  isFontCustomized
                     ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
-                    : "bg-white text-[#475569] border-[#E8E8E5] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                    : "bg-[#F8FAFC] text-[#334155] border-[#CBD5E1]"
                 }`}
-                title="Adjust font size for each text category on the invoice"
+                title="Adjust font sizes"
               >
-                <Type className="w-3.5 h-3.5" />
-                <span>Font Sizes</span>
-                {(invoice.fontSizeConfig?.header !== 1.0 ||
-                  invoice.fontSizeConfig?.body !== 1.0 ||
-                  invoice.fontSizeConfig?.table !== 1.0 ||
-                  invoice.fontSizeConfig?.total !== 1.0) && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
-                )}
+                <Type className="w-3.5 h-3.5 text-blue-600" />
+                <span>Fonts</span>
+                {isFontCustomized && <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />}
               </button>
+            </div>
+
+            <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t border-[#F0F0EE] sm:border-0">
+              {/* Zoom Controls */}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.max(35, z - 10))}
+                  className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                  title="Zoom Out"
+                >
+                  <ZoomOut className="w-3.5 h-3.5" />
+                </button>
+                <span className="text-[11px] font-mono font-medium text-[#70757A] w-9 text-center">
+                  {zoomLevel}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel((z) => Math.min(130, z + 10))}
+                  className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                  title="Zoom In"
+                >
+                  <ZoomIn className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={handleFitScreen}
+                  className="px-2 py-1 text-[11px] font-medium text-[#4468E8] hover:bg-[#EEF2FF] rounded transition-colors"
+                  title="Fit to Screen"
+                >
+                  Fit
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setZoomLevel(100)}
+                  className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded"
+                  title="100% Size"
+                >
+                  <Maximize2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Desktop Font Sizes Toggle Button */}
+              <div className="hidden sm:flex items-center gap-1 border-l border-[#E8E8E5] pl-2">
+                <button
+                  type="button"
+                  onClick={() => setFontPanelOpen(!fontPanelOpen)}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                    fontPanelOpen
+                      ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
+                      : "bg-white text-[#475569] border-[#E8E8E5] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                  }`}
+                  title="Adjust font size for each text category on the invoice"
+                >
+                  <Type className="w-3.5 h-3.5" />
+                  <span>Font Sizes</span>
+                  {isFontCustomized && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                  )}
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* Font Sizes Customization Panel for Each Text Category */}
+          {/* Font Sizes Customization Panel for Each Text Category (Desktop inline) */}
           {fontPanelOpen && (
             <div className="p-4 rounded-xl bg-white border border-[#E8E8E5] shadow-card space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center justify-between border-b border-[#F0F0EE] pb-2.5">
@@ -1359,209 +1568,63 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {/* 1. Header & Brand Title */}
-                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-[#0F172A] block">
-                        Header & Title
-                      </span>
-                      <span className="text-[10px] text-[#64748B]">
-                        INVOICE title, company name
-                      </span>
-                    </div>
-                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                      {Math.round((invoice.fontSizeConfig?.header || 1.0) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("header", -0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Decrease header font size"
+                {FONT_CATEGORIES.map((cat) => {
+                  const currentScale = invoice.fontSizeConfig?.[cat.key] || 1.0;
+                  return (
+                    <div
+                      key={cat.key}
+                      className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2"
                     >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("header", 0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Increase header font size"
-                    >
-                      +
-                    </button>
-                    <div className="flex items-center gap-1 ml-auto">
-                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="font-semibold text-[#0F172A] block">
+                            {cat.label}
+                          </span>
+                          <span className="text-[10px] text-[#64748B]">
+                            {cat.sub}
+                          </span>
+                        </div>
+                        <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                          {Math.round(currentScale * 100)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
                         <button
-                          key={scale}
                           type="button"
-                          onClick={() => handleSetCategoryScale("header", scale)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
-                            (invoice.fontSizeConfig?.header || 1.0) === scale
-                              ? "bg-blue-600 text-white font-bold"
-                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
-                          }`}
+                          onClick={() => handleUpdateFontSize(cat.key, -0.1)}
+                          className="h-7 w-7 flex items-center justify-center rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                          title={`Decrease ${cat.label} font size`}
                         >
-                          {Math.round(scale * 100)}%
+                          −
                         </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Body & Addresses */}
-                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-[#0F172A] block">
-                        Body & Addresses
-                      </span>
-                      <span className="text-[10px] text-[#64748B]">
-                        Billed to, dates, metadata
-                      </span>
-                    </div>
-                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                      {Math.round((invoice.fontSizeConfig?.body || 1.0) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("body", -0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Decrease body font size"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("body", 0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Increase body font size"
-                    >
-                      +
-                    </button>
-                    <div className="flex items-center gap-1 ml-auto">
-                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
                         <button
-                          key={scale}
                           type="button"
-                          onClick={() => handleSetCategoryScale("body", scale)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
-                            (invoice.fontSizeConfig?.body || 1.0) === scale
-                              ? "bg-blue-600 text-white font-bold"
-                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
-                          }`}
+                          onClick={() => handleUpdateFontSize(cat.key, 0.1)}
+                          className="h-7 w-7 flex items-center justify-center rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                          title={`Increase ${cat.label} font size`}
                         >
-                          {Math.round(scale * 100)}%
+                          +
                         </button>
-                      ))}
+                        <div className="flex items-center gap-1 ml-auto">
+                          {cat.presets.map((scale) => (
+                            <button
+                              key={scale}
+                              type="button"
+                              onClick={() => handleSetCategoryScale(cat.key, scale)}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                                currentScale === scale
+                                  ? "bg-blue-600 text-white font-bold"
+                                  : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
+                              }`}
+                            >
+                              {Math.round(scale * 100)}%
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-
-                {/* 3. Table & Deliverables */}
-                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-[#0F172A] block">
-                        Table & Items
-                      </span>
-                      <span className="text-[10px] text-[#64748B]">
-                        Item descriptions, rates, totals
-                      </span>
-                    </div>
-                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                      {Math.round((invoice.fontSizeConfig?.table || 1.0) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("table", -0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Decrease table font size"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("table", 0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Increase table font size"
-                    >
-                      +
-                    </button>
-                    <div className="flex items-center gap-1 ml-auto">
-                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
-                        <button
-                          key={scale}
-                          type="button"
-                          onClick={() => handleSetCategoryScale("table", scale)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
-                            (invoice.fontSizeConfig?.table || 1.0) === scale
-                              ? "bg-blue-600 text-white font-bold"
-                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
-                          }`}
-                        >
-                          {Math.round(scale * 100)}%
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Totals & Summary */}
-                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-semibold text-[#0F172A] block">
-                        Totals & Summary
-                      </span>
-                      <span className="text-[10px] text-[#64748B]">
-                        Subtotal, taxes, balance due, terms
-                      </span>
-                    </div>
-                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
-                      {Math.round((invoice.fontSizeConfig?.total || 1.0) * 100)}%
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("total", -0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Decrease totals font size"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleUpdateFontSize("total", 0.1)}
-                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
-                      title="Increase totals font size"
-                    >
-                      +
-                    </button>
-                    <div className="flex items-center gap-1 ml-auto">
-                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
-                        <button
-                          key={scale}
-                          type="button"
-                          onClick={() => handleSetCategoryScale("total", scale)}
-                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
-                            (invoice.fontSizeConfig?.total || 1.0) === scale
-                              ? "bg-blue-600 text-white font-bold"
-                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
-                          }`}
-                        >
-                          {Math.round(scale * 100)}%
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1891,6 +1954,155 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         onApplyCrop={handleEditorApplyCroppedLogo}
         title="Crop & Frame Business Logo"
       />
+
+      {/* Mobile/Responsive Font Sizes Modal & Bottom Sheet */}
+      {fontModalOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 z-50 animate-in fade-in duration-150">
+          <div className="bg-white rounded-t-2xl sm:rounded-2xl max-w-lg w-full max-h-[88vh] overflow-y-auto p-4 sm:p-6 shadow-2xl border border-[#E8E8E5] space-y-4 animate-in slide-in-from-bottom sm:zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-[#F0F0EE] sticky top-0 bg-white z-10">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Type className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-sm text-[#0F172A]">
+                    Invoice Font Scaling
+                  </h3>
+                  <p className="text-[11px] text-[#64748B]">
+                    Scale text categories on mobile & desktop
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleResetFontSizes}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-[#64748B] hover:text-[#0F172A] bg-[#F8FAFC] border border-[#E2E8F0] rounded-md transition-colors"
+                  title="Reset all font sizes to 100%"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFontModalOpen(false)}
+                  className="p-1.5 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Template Selector inside Modal */}
+            <div className="p-3 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5">
+              <label className="block text-xs font-semibold text-[#0F172A]">
+                Invoice Template Design
+              </label>
+              <select
+                value={invoice.templateId}
+                onChange={(e) =>
+                  setInvoice({ ...invoice, templateId: e.target.value as TemplateId })
+                }
+                className="w-full px-2.5 py-1.5 text-xs font-medium rounded-lg border border-[#CBD5E1] bg-white text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-blue-500"
+              >
+                {TEMPLATE_LIST.map((tpl) => (
+                  <option key={tpl.slug} value={tpl.slug}>
+                    {tpl.name} — {tpl.description}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* 4 Categories */}
+            <div className="space-y-3">
+              {FONT_CATEGORIES.map((cat) => {
+                const currentScale = invoice.fontSizeConfig?.[cat.key] || 1.0;
+                return (
+                  <div
+                    key={cat.key}
+                    className="p-3 rounded-xl bg-[#FAFAF9] border border-[#E7E5E4] space-y-2.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-semibold text-xs text-[#0F172A] block">
+                          {cat.label}
+                        </span>
+                        <span className="text-[10px] text-[#64748B]">
+                          {cat.sub}
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded-md border border-[#E2E8F0] shadow-2xs">
+                        {Math.round(currentScale * 100)}%
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateFontSize(cat.key, -0.1)}
+                          className="h-8 w-9 min-h-[32px] min-w-[36px] flex items-center justify-center rounded-lg bg-white border border-[#CBD5E1] text-sm font-bold active:bg-blue-100 text-[#0F172A] shadow-2xs transition-colors"
+                          title={`Decrease ${cat.label} font size`}
+                        >
+                          −
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUpdateFontSize(cat.key, 0.1)}
+                          className="h-8 w-9 min-h-[32px] min-w-[36px] flex items-center justify-center rounded-lg bg-white border border-[#CBD5E1] text-sm font-bold active:bg-blue-100 text-[#0F172A] shadow-2xs transition-colors"
+                          title={`Increase ${cat.label} font size`}
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1 ml-auto">
+                        {cat.presets.map((scale) => (
+                          <button
+                            key={scale}
+                            type="button"
+                            onClick={() => handleSetCategoryScale(cat.key, scale)}
+                            className={`px-2 py-1 rounded-md text-[11px] font-mono transition-colors shadow-2xs ${
+                              currentScale === scale
+                                ? "bg-blue-600 text-white font-bold"
+                                : "bg-white text-[#64748B] border border-[#CBD5E1] hover:bg-[#F1F5F9] active:bg-blue-50"
+                            }`}
+                          >
+                            {Math.round(scale * 100)}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Modal Actions */}
+            <div className="pt-2 flex items-center justify-between gap-2 border-t border-[#F0F0EE]">
+              <button
+                type="button"
+                onClick={() => {
+                  setActiveTab("preview");
+                  setFontModalOpen(false);
+                }}
+                className="inline-flex lg:hidden items-center justify-center gap-1.5 px-3 py-2 text-xs font-semibold text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors"
+              >
+                <span>View in Preview →</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setFontModalOpen(false)}
+                className="ml-auto px-4 py-2 text-xs font-semibold text-white bg-[#0F172A] hover:bg-black rounded-lg shadow-sm transition-colors"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
