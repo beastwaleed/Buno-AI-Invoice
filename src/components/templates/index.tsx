@@ -1,9 +1,7 @@
 import React from "react";
-import { InvoiceData, TemplateDefinition } from "@/types/invoice";
-import { ModernTemplate } from "./ModernTemplate";
-import { MinimalTemplate } from "./MinimalTemplate";
+import { InvoiceData, TemplateDefinition, InvoiceFontSizeConfig } from "@/types/invoice";
 import { ClassicTemplate } from "./ClassicTemplate";
-import { ElegantTemplate } from "./ElegantTemplate";
+import { MinimalTemplate } from "./MinimalTemplate";
 import { CorporateTemplate } from "./CorporateTemplate";
 import { CompactTemplate } from "./CompactTemplate";
 import { WaveTemplate } from "./WaveTemplate";
@@ -12,21 +10,8 @@ import { CrimsonTemplate } from "./CrimsonTemplate";
 import { RoyalBlueTemplate } from "./RoyalBlueTemplate";
 import { AgencySidebarTemplate } from "./AgencySidebarTemplate";
 
+// 9 Production Templates (Classic Ledger is default)
 export const TEMPLATE_LIST: TemplateDefinition[] = [
-  {
-    slug: "modern",
-    name: "Modern Studio",
-    description: "Restrained cool blue accent, clean hierarchy, badge status, balanced grid.",
-    accentColor: "#4468E8",
-    fontStyle: "sans",
-  },
-  {
-    slug: "minimal",
-    name: "Pure Minimal",
-    description: "Monochrome, ultra-clean, generous whitespace and subtle borders.",
-    accentColor: "#202124",
-    fontStyle: "sans",
-  },
   {
     slug: "classic",
     name: "Classic Ledger",
@@ -35,11 +20,11 @@ export const TEMPLATE_LIST: TemplateDefinition[] = [
     fontStyle: "serif",
   },
   {
-    slug: "elegant",
-    name: "Editorial Serif",
-    description: "Sophisticated Playfair serif typography with warm ivory accents and timeless styling.",
-    accentColor: "#1E293B",
-    fontStyle: "serif",
+    slug: "minimal",
+    name: "Pure Minimal",
+    description: "Monochrome, ultra-clean, generous whitespace and subtle borders.",
+    accentColor: "#202124",
+    fontStyle: "sans",
   },
   {
     slug: "corporate",
@@ -55,7 +40,6 @@ export const TEMPLATE_LIST: TemplateDefinition[] = [
     accentColor: "#475569",
     fontStyle: "sans",
   },
-  // Custom & High-Craft Templates:
   {
     slug: "wave",
     name: "Wave Minimal",
@@ -97,38 +81,80 @@ interface InvoiceRendererProps {
   invoice: InvoiceData;
   templateId?: string;
   accentColor?: string;
+  fontSizeConfig?: InvoiceFontSizeConfig;
 }
 
 export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   invoice,
   templateId,
   accentColor,
+  fontSizeConfig,
 }) => {
-  const selectedTemplate = templateId || invoice.templateId || "modern";
+  const selectedTemplate = templateId || invoice.templateId || "classic";
 
-  switch (selectedTemplate.toLowerCase()) {
-    case "minimal":
-      return <MinimalTemplate invoice={invoice} accentColor={accentColor} />;
-    case "classic":
-      return <ClassicTemplate invoice={invoice} accentColor={accentColor} />;
-    case "elegant":
-      return <ElegantTemplate invoice={invoice} accentColor={accentColor} />;
-    case "corporate":
-      return <CorporateTemplate invoice={invoice} accentColor={accentColor} />;
-    case "compact":
-      return <CompactTemplate invoice={invoice} accentColor={accentColor} />;
-    case "wave":
-      return <WaveTemplate invoice={invoice} accentColor={accentColor} />;
-    case "amber-grid":
-      return <AmberGridTemplate invoice={invoice} accentColor={accentColor} />;
-    case "crimson":
-      return <CrimsonTemplate invoice={invoice} accentColor={accentColor} />;
-    case "royal-blue":
-      return <RoyalBlueTemplate invoice={invoice} accentColor={accentColor} />;
-    case "agency-sidebar":
-      return <AgencySidebarTemplate invoice={invoice} accentColor={accentColor} />;
-    case "modern":
-    default:
-      return <ModernTemplate invoice={invoice} accentColor={accentColor} />;
-  }
+  const fontSizes = fontSizeConfig || invoice.fontSizeConfig || {};
+  const headerScale = fontSizes.header || 1.0;
+  const bodyScale = fontSizes.body || 1.0;
+  const tableScale = fontSizes.table || 1.0;
+  const totalScale = fontSizes.total || 1.0;
+
+  const renderTemplateContent = () => {
+    switch (selectedTemplate.toLowerCase()) {
+      case "minimal":
+        return <MinimalTemplate invoice={invoice} accentColor={accentColor} />;
+      case "corporate":
+        return <CorporateTemplate invoice={invoice} accentColor={accentColor} />;
+      case "compact":
+        return <CompactTemplate invoice={invoice} accentColor={accentColor} />;
+      case "wave":
+        return <WaveTemplate invoice={invoice} accentColor={accentColor} />;
+      case "amber-grid":
+        return <AmberGridTemplate invoice={invoice} accentColor={accentColor} />;
+      case "crimson":
+        return <CrimsonTemplate invoice={invoice} accentColor={accentColor} />;
+      case "royal-blue":
+        return <RoyalBlueTemplate invoice={invoice} accentColor={accentColor} />;
+      case "agency-sidebar":
+        return <AgencySidebarTemplate invoice={invoice} accentColor={accentColor} />;
+      case "classic":
+      default:
+        return <ClassicTemplate invoice={invoice} accentColor={accentColor} />;
+    }
+  };
+
+  return (
+    <div className="invoice-render-wrapper w-full relative">
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            .invoice-render-wrapper [data-invoice-cat="header"] { --cat-scale: ${headerScale}; }
+            .invoice-render-wrapper [data-invoice-cat="body"] { --cat-scale: ${bodyScale}; }
+            .invoice-render-wrapper [data-invoice-cat="table"] { --cat-scale: ${tableScale}; }
+            .invoice-render-wrapper [data-invoice-cat="total"] { --cat-scale: ${totalScale}; }
+
+            .invoice-render-wrapper [data-invoice-cat] .text-4xl { font-size: calc(2.25rem * var(--cat-scale, 1)) !important; line-height: calc(2.5rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-3xl { font-size: calc(1.875rem * var(--cat-scale, 1)) !important; line-height: calc(2.25rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-2xl { font-size: calc(1.5rem * var(--cat-scale, 1)) !important; line-height: calc(2rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-xl { font-size: calc(1.25rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-lg { font-size: calc(1.125rem * var(--cat-scale, 1)) !important; line-height: calc(1.75rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-base { font-size: calc(1rem * var(--cat-scale, 1)) !important; line-height: calc(1.5rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-sm { font-size: calc(0.875rem * var(--cat-scale, 1)) !important; line-height: calc(1.25rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-xs { font-size: calc(0.75rem * var(--cat-scale, 1)) !important; line-height: calc(1rem * var(--cat-scale, 1)) !important; }
+            .invoice-render-wrapper [data-invoice-cat] .text-\\[11px\\],
+            .invoice-render-wrapper [data-invoice-cat] .text-\\[10px\\],
+            .invoice-render-wrapper [data-invoice-cat] .text-\\[9px\\] {
+              font-size: calc(0.6875rem * var(--cat-scale, 1)) !important;
+              line-height: calc(0.95rem * var(--cat-scale, 1)) !important;
+            }
+
+            .invoice-render-wrapper [data-invoice-cat="table"] table th,
+            .invoice-render-wrapper [data-invoice-cat="table"] table td {
+              font-size: calc(0.75rem * var(--cat-scale, 1));
+            }
+          `,
+        }}
+      />
+      {renderTemplateContent()}
+    </div>
+  );
 };

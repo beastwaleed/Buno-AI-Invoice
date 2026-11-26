@@ -32,7 +32,7 @@ export const CompactTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-white text-neutral-800 p-6 md:p-8 font-sans text-xs min-h-[900px] flex flex-col justify-between border border-neutral-200">
       <div>
         {/* Compact Header */}
-        <div className="flex justify-between items-center pb-4 border-b border-neutral-300">
+        <div data-invoice-cat="header" className="flex justify-between items-center pb-4 border-b border-neutral-300">
           <div className="flex items-center gap-3">
             {business.logoUrl ? (
               <img
@@ -62,7 +62,7 @@ export const CompactTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Compact 3-Column Meta Strip */}
-        <div className="grid grid-cols-3 gap-2 py-3 border-b border-neutral-200 text-[11px] bg-neutral-50/50 px-2 rounded mt-2">
+        <div data-invoice-cat="body" className="grid grid-cols-3 gap-2 py-3 border-b border-neutral-200 text-[11px] bg-neutral-50/50 px-2 rounded mt-2">
           <div>
             <span className="font-semibold text-neutral-500 block text-[9px] uppercase">
               Bill To:
@@ -88,7 +88,7 @@ export const CompactTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* High-Density Line Items Table */}
-        <div className="mt-3">
+        <div data-invoice-cat="table" className="mt-3">
           <table className="w-full text-left text-[11px]">
             <thead>
               <tr className="bg-neutral-100 text-neutral-700 font-semibold uppercase text-[9px] tracking-wider">
@@ -124,7 +124,7 @@ export const CompactTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Compact Totals & Footer Info */}
-        <div className="flex justify-between items-start pt-4 mt-2 border-t border-neutral-200">
+        <div data-invoice-cat="total" className="flex justify-between items-start pt-4 mt-2 border-t border-neutral-200">
           <div className="w-1/2 text-[10px] text-neutral-500 space-y-1">
             {business.bankDetails && (
               <p className="font-mono text-[9px] whitespace-pre-line text-neutral-600">

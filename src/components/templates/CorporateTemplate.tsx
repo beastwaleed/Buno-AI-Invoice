@@ -35,7 +35,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
     <div className="w-full bg-white text-slate-800 p-8 md:p-12 font-sans min-h-[900px] flex flex-col justify-between border-t-8 border-[#1E3A5F]">
       <div>
         {/* Top Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-8 border-b border-slate-200">
+        <div data-invoice-cat="header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-8 border-b border-slate-200">
           <div className="flex items-center gap-4">
             {business.logoUrl ? (
               <img
@@ -67,7 +67,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         </div>
 
         {/* Enterprise Metadata Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 p-4 my-6 text-xs">
+        <div data-invoice-cat="body" className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-slate-50 border border-slate-200 p-4 my-6 text-xs">
           <div>
             <span className="text-slate-400 block uppercase tracking-wider text-[10px]">
               Issue Date
@@ -97,7 +97,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         </div>
 
         {/* Sender & Receiver Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs">
+        <div data-invoice-cat="body" className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8 text-xs">
           <div className="p-4 rounded border border-slate-200 bg-white shadow-sm">
             <div className="text-[10px] font-bold text-[#1E3A5F] uppercase tracking-wider mb-2">
               Issuer Entity Details
@@ -135,7 +135,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         </div>
 
         {/* Full-width colored band table */}
-        <div className="overflow-x-auto">
+        <div data-invoice-cat="table" className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-[#1E3A5F] text-white font-semibold uppercase tracking-wider text-[11px]">
@@ -167,7 +167,7 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         </div>
 
         {/* Totals & Remittance Section */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-8 mt-6">
+        <div data-invoice-cat="total" className="flex flex-col sm:flex-row justify-between items-start gap-8 mt-6">
           <div className="w-full sm:w-1/2 text-xs space-y-3">
             {business.bankDetails && (
               <div className="p-3.5 rounded bg-slate-50 border border-slate-200">

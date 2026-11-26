@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     const {
       customerId,
       invoiceNumber,
-      templateId = "modern",
+      templateId = "classic",
       status = "draft",
       invoiceDate = new Date(),
       dueDate,

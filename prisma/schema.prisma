@@ -71,7 +71,7 @@ model Invoice {
   userId           String
   customerId       String?
   invoiceNumber    String
-  templateId       String           @default("modern")
+  templateId       String           @default("classic")
   status           String           @default("draft") // draft, sent, paid, partially_paid, overdue, cancelled
   invoiceDate      DateTime         @default(now())
   dueDate          DateTime
@@ -147,7 +147,7 @@ model InvoiceTemplate {
 model UserSettings {
   id                String   @id @default(cuid())
   userId            String   @unique
-  defaultTemplate   String   @default("modern")
+  defaultTemplate   String   @default("classic")
   currency          String   @default("USD")
   language          String   @default("en")
   dateFormat        String   @default("YYYY-MM-DD")

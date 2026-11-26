@@ -224,7 +224,7 @@ const VOICE_PROMPTS = [
 export const LandingPageClient: React.FC = () => {
   // Hero interactive states
   const [heroCurrency, setHeroCurrency] = useState<SupportedCurrency>("USD");
-  const [heroTemplate, setHeroTemplate] = useState<string>("modern");
+  const [heroTemplate, setHeroTemplate] = useState<string>("classic");
 
   // Template gallery states
   const [templateCategory, setTemplateCategory] = useState<string>("all");
@@ -249,10 +249,10 @@ export const LandingPageClient: React.FC = () => {
   const filteredTemplates = TEMPLATE_LIST.filter((tpl) => {
     if (templateCategory === "all") return true;
     if (templateCategory === "minimal") {
-      return ["modern", "minimal", "wave", "compact"].includes(tpl.slug);
+      return ["minimal", "wave", "compact"].includes(tpl.slug);
     }
     if (templateCategory === "creative") {
-      return ["elegant", "agency-sidebar", "amber-grid", "crimson"].includes(tpl.slug);
+      return ["agency-sidebar", "amber-grid", "crimson"].includes(tpl.slug);
     }
     if (templateCategory === "corporate") {
       return ["corporate", "classic", "royal-blue"].includes(tpl.slug);
@@ -280,7 +280,7 @@ export const LandingPageClient: React.FC = () => {
 
           <nav className="hidden md:flex items-center gap-7 text-xs font-medium text-[#64748B]">
             <a href="#templates" className="hover:text-[#0F172A] transition-colors">
-              Templates (11)
+              Templates (9)
             </a>
             <a href="#architecture" className="hover:text-[#0F172A] transition-colors">
               Architecture
@@ -322,7 +322,7 @@ export const LandingPageClient: React.FC = () => {
         {/* Subtle Status Pill */}
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E2E8F0] shadow-2xs text-xs font-mono text-[#334155]">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Production Ready · 11 Typographic Systems · Open Source</span>
+          <span>Production Ready · 9 Typographic Systems · Open Source</span>
         </div>
 
         {/* Main Value Headline */}
@@ -332,7 +332,7 @@ export const LandingPageClient: React.FC = () => {
             <span className="text-[#334155]">precision & speed.</span>
           </h1>
           <p className="text-base sm:text-lg text-[#64748B] max-w-2xl mx-auto leading-relaxed">
-            Deterministic multi-currency calculations, multilingual voice input, and 11 production typographic templates. Free, open source, and built with zero subscription paywalls.
+            Deterministic multi-currency calculations, multilingual voice input, and 9 production typographic templates. Free, open source, and built with zero subscription paywalls.
           </p>
         </div>
 
@@ -350,7 +350,7 @@ export const LandingPageClient: React.FC = () => {
             className="w-full sm:w-auto px-6 py-3.5 text-sm font-semibold text-[#334155] bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-xl shadow-2xs transition-all flex items-center justify-center gap-2"
           >
             <Layers className="w-4 h-4 text-[#64748B]" />
-            <span>Explore 11 Templates</span>
+            <span>Explore 9 Templates</span>
           </a>
         </div>
 
@@ -432,9 +432,9 @@ export const LandingPageClient: React.FC = () => {
                     </label>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        { slug: "modern", label: "Modern Studio" },
-                        { slug: "minimal", label: "Pure Minimal" },
                         { slug: "classic", label: "Classic Ledger" },
+                        { slug: "minimal", label: "Pure Minimal" },
+                        { slug: "corporate", label: "Corporate" },
                         { slug: "wave", label: "Wave Minimal" },
                         { slug: "royal-blue", label: "Royal Blue" },
                       ].map((t) => (
@@ -544,7 +544,7 @@ export const LandingPageClient: React.FC = () => {
         </div>
       </section>
 
-      {/* 4. Complete 11 Typographic Templates Showcase Section */}
+      {/* 4. Complete 9 Typographic Templates Showcase Section */}
       <section id="templates" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#E8E8E5] pb-8">
           <div className="space-y-3 max-w-2xl">
@@ -552,7 +552,7 @@ export const LandingPageClient: React.FC = () => {
               Typographic Systems
             </span>
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A]">
-              11 Bespoke Invoice Templates.
+              9 Bespoke Invoice Templates.
             </h2>
             <p className="text-sm text-[#64748B] leading-relaxed">
               Every template is built with deterministic CSS grids, distinct typographic hierarchies, and print-ready stylesheets. Zero cookie-cutter designs.
@@ -902,7 +902,7 @@ export const LandingPageClient: React.FC = () => {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto text-left">
             <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0]">
-              <span className="text-xl font-bold text-[#0F172A]">11</span>
+              <span className="text-xl font-bold text-[#0F172A]">9</span>
               <p className="text-xs text-[#64748B] mt-1">Typographic templates unlocked</p>
             </div>
             <div className="p-4 rounded-xl bg-[#FAFAF8] border border-[#E2E8F0]">
@@ -967,7 +967,7 @@ export const LandingPageClient: React.FC = () => {
               </li>
               <li>
                 <a href="#templates" className="hover:text-[#0F172A] transition-colors">
-                  11 Design Templates
+                  9 Design Templates
                 </a>
               </li>
               <li>

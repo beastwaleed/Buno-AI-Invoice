@@ -29,7 +29,23 @@ export async function setSessionCookie(userId: string) {
 
 export async function clearSessionCookie() {
   const cookieStore = cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  try {
+    cookieStore.set(SESSION_COOKIE_NAME, "", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 0,
+      expires: new Date(0),
+    });
+    cookieStore.delete({
+      name: SESSION_COOKIE_NAME,
+      path: "/",
+    });
+  } catch {
+    // Fallback if delete options not supported in older runtimes
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  }
 }
 
 export async function getCurrentUser() {

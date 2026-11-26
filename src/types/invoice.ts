@@ -7,12 +7,24 @@ export type InvoiceStatus =
   | "cancelled";
 
 export type TemplateId =
-  | "modern"
-  | "minimal"
   | "classic"
-  | "elegant"
+  | "minimal"
   | "corporate"
-  | "compact";
+  | "compact"
+  | "wave"
+  | "amber-grid"
+  | "crimson"
+  | "royal-blue"
+  | "agency-sidebar"
+  | "modern"
+  | "elegant";
+
+export interface InvoiceFontSizeConfig {
+  header?: number; // multiplier: 1.0 = 100%, 1.15 = 115%, etc.
+  body?: number;   // multiplier for addresses, dates, metadata
+  table?: number;  // multiplier for items, quantities, prices
+  total?: number;  // multiplier for subtotal, taxes, totals, notes
+}
 
 export interface BusinessProfileData {
   id?: string;
@@ -91,6 +103,7 @@ export interface InvoiceData {
   customer?: CustomerData | null;
   items: InvoiceItemData[];
   payments?: InvoicePaymentData[];
+  fontSizeConfig?: InvoiceFontSizeConfig;
   createdAt?: string | Date;
   updatedAt?: string | Date;
 }

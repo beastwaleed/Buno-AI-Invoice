@@ -24,7 +24,7 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-[#0E1E38] text-white font-sans min-h-[900px] flex flex-col justify-between relative overflow-hidden">
       <div>
         {/* Top Bold Red Header */}
-        <div className="bg-[#D91B24] p-8 md:p-10 flex justify-between items-center text-white">
+        <div data-invoice-cat="header" className="bg-[#D91B24] p-8 md:p-10 flex justify-between items-center text-white">
           <div className="flex items-center gap-3">
             {business.logoUrl ? (
               <div className="bg-white/15 p-1 rounded-lg flex items-center justify-center max-h-12 max-w-[120px]">
@@ -53,7 +53,7 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Client & Date Details */}
-        <div className="p-8 md:p-10 pb-4 grid grid-cols-2 gap-8 text-xs text-slate-300">
+        <div data-invoice-cat="body" className="p-8 md:p-10 pb-4 grid grid-cols-2 gap-8 text-xs text-slate-300">
           <div>
             <span className="font-semibold text-white block mb-1">Invoice To</span>
             <p className="font-bold text-white text-sm">{customer?.name || "Client"}</p>
@@ -75,7 +75,7 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Sage Green Header Table */}
-        <div className="px-8 md:px-10 my-4">
+        <div data-invoice-cat="table" className="px-8 md:px-10 my-4">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-[#4E796B] text-white font-bold uppercase tracking-wider text-[11px]">
@@ -110,7 +110,7 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </table>
 
           {/* Grand Total Row */}
-          <div className="flex justify-between items-center py-4 text-sm font-bold text-white mt-2 px-3 border-t border-[#1F3354]">
+          <div data-invoice-cat="total" className="flex justify-between items-center py-4 text-sm font-bold text-white mt-2 px-3 border-t border-[#1F3354]">
             <span className="uppercase tracking-widest text-xs text-slate-300">TOTAL</span>
             <span className="font-mono text-lg text-emerald-400">
               {formatCurrency(total, currency)}
@@ -119,7 +119,7 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Terms & Payment Information with Script Signature */}
-        <div className="px-8 md:px-10 py-6 grid grid-cols-2 gap-8 text-xs text-slate-300">
+        <div data-invoice-cat="total" className="px-8 md:px-10 py-6 grid grid-cols-2 gap-8 text-xs text-slate-300">
           <div className="space-y-3">
             <div>
               <span className="font-bold text-white block mb-0.5">

@@ -29,7 +29,7 @@ export const RoyalBlueTemplate: React.FC<TemplateProps> = ({ invoice }) => {
   return (
     <div className="w-full bg-[#00338D] text-neutral-900 font-sans min-h-[900px] flex flex-col justify-between p-6 md:p-8">
       {/* Top Banner Header */}
-      <div className="flex justify-between items-start text-white pb-6 px-4">
+      <div data-invoice-cat="header" className="flex justify-between items-start text-white pb-6 px-4">
         <div>
           <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight">
             Invoice
@@ -65,7 +65,7 @@ export const RoyalBlueTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       <div className="bg-white rounded-t-2xl p-6 md:p-10 flex-1 flex flex-col justify-between shadow-lg">
         <div>
           {/* Metadata Split */}
-          <div className="grid grid-cols-2 gap-8 pb-8 border-b border-neutral-200 text-xs">
+          <div data-invoice-cat="body" className="grid grid-cols-2 gap-8 pb-8 border-b border-neutral-200 text-xs">
             <div>
               <span className="font-bold text-neutral-900 block mb-2 text-sm">
                 Invoice Details
@@ -104,7 +104,7 @@ export const RoyalBlueTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </div>
 
           {/* 5-Column Clean Table */}
-          <div className="py-6 overflow-x-auto">
+          <div data-invoice-cat="table" className="py-6 overflow-x-auto">
             <table className="w-full text-left text-xs">
               <thead>
                 <tr className="border-b-2 border-neutral-900 text-[11px] font-bold text-neutral-900 uppercase tracking-wider">
@@ -136,7 +136,7 @@ export const RoyalBlueTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </div>
 
           {/* Bottom Financial & Terms Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-neutral-200 text-xs">
+          <div data-invoice-cat="total" className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-4 border-t border-neutral-200 text-xs">
             <div className="space-y-4">
               <div>
                 <span className="font-bold uppercase tracking-wider text-neutral-900 block mb-1">

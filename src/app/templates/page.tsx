@@ -19,13 +19,13 @@ export default async function TemplatesPage() {
     }),
   ]);
 
-  const currentDefault = user.settings?.defaultTemplate || "modern";
+  const currentDefault = user.settings?.defaultTemplate || "classic";
 
   return (
     <AppShell
       user={user}
       title="Invoice Template Library"
-      subtitle="Explore 11 authentic design systems crafted for consulting, studios, agency brands, and enterprise."
+      subtitle="Explore 9 authentic design systems crafted for consulting, studios, agency brands, and enterprise."
     >
       <TemplatesGalleryClient
         currentDefault={currentDefault}

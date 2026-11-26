@@ -23,7 +23,7 @@ export async function GET() {
     return NextResponse.json({
       settings: settings || {
         currency: profile?.defaultCurrency || "USD",
-        defaultTemplate: "modern",
+        defaultTemplate: "classic",
         dateFormat: "YYYY-MM-DD",
         language: "en",
         accentColor: "#4468E8",
@@ -48,7 +48,7 @@ export async function PUT(req: NextRequest) {
 
     const body = await req.json();
     const currency = body.currency ? String(body.currency).toUpperCase() : "USD";
-    const defaultTemplate = body.defaultTemplate || "modern";
+    const defaultTemplate = body.defaultTemplate || "classic";
     const dateFormat = body.dateFormat || "YYYY-MM-DD";
     const language = body.language || "en";
     const accentColor = body.accentColor || "#4468E8";

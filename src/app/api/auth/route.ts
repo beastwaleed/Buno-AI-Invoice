@@ -30,7 +30,16 @@ export async function POST(req: NextRequest) {
 
     if (action === "logout") {
       await clearSessionCookie();
-      return NextResponse.json({ success: true });
+      const res = NextResponse.json({ success: true });
+      res.cookies.set("buno_session_id", "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+        expires: new Date(0),
+      });
+      return res;
     }
 
     if (action === "login") {
@@ -92,7 +101,7 @@ export async function POST(req: NextRequest) {
           },
           settings: {
             create: {
-              defaultTemplate: "modern",
+              defaultTemplate: "classic",
               currency: "USD",
             },
           },

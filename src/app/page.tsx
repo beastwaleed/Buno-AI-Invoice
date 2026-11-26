@@ -5,7 +5,7 @@ import { LandingPageClient } from "@/components/landing/LandingPageClient";
 export const metadata: Metadata = {
   title: "Buno — Precision Invoicing for Modern Studios & Builders",
   description:
-    "Deterministic multi-currency calculations, multilingual voice input, and 11 bespoke typographic invoice templates. Free, open source, and production ready.",
+    "Deterministic multi-currency calculations, multilingual voice input, and 9 bespoke typographic invoice templates. Free, open source, and production ready.",
 };
 
 export default function LandingPage() {

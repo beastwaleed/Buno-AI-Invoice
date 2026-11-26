@@ -32,7 +32,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-white text-black p-10 md:p-16 font-sans selection:bg-neutral-200 min-h-[900px] flex flex-col justify-between">
       <div>
         {/* Minimal Header */}
-        <div className="flex justify-between items-start pb-12">
+        <div data-invoice-cat="header" className="flex justify-between items-start pb-12">
           <div>
             {business.logoUrl ? (
               <img
@@ -60,7 +60,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Minimal Sender / Client Grid */}
-        <div className="grid grid-cols-2 gap-12 pb-12 border-b border-neutral-200 text-xs text-neutral-600 leading-relaxed">
+        <div data-invoice-cat="body" className="grid grid-cols-2 gap-12 pb-12 border-b border-neutral-200 text-xs text-neutral-600 leading-relaxed">
           <div>
             <div className="uppercase tracking-widest text-[10px] text-neutral-400 mb-2">
               Issuer
@@ -90,7 +90,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Line Items */}
-        <div className="py-8">
+        <div data-invoice-cat="table" className="py-8">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-black text-black font-medium uppercase tracking-wider text-[11px]">
@@ -122,7 +122,7 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Minimal Totals */}
-        <div className="flex justify-end pt-4 border-t border-neutral-200">
+        <div data-invoice-cat="total" className="flex justify-end pt-4 border-t border-neutral-200">
           <div className="w-64 space-y-2 text-xs">
             <div className="flex justify-between text-neutral-500">
               <span>Subtotal</span>

@@ -24,7 +24,7 @@ export const AmberGridTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-white text-neutral-900 p-8 md:p-12 font-sans min-h-[900px] flex flex-col justify-between">
       <div>
         {/* Top Header */}
-        <div className="flex justify-between items-start pb-8">
+        <div data-invoice-cat="header" className="flex justify-between items-start pb-8">
           <div>
             {business.logoUrl ? (
               <img
@@ -40,7 +40,7 @@ export const AmberGridTemplate: React.FC<TemplateProps> = ({ invoice }) => {
               {business.businessName}
             </p>
 
-            <div className="mt-4 space-y-2 text-xs text-neutral-700">
+            <div data-invoice-cat="body" className="mt-4 space-y-2 text-xs text-neutral-700">
               <div className="flex items-center gap-2">
                 <span className="w-24 font-medium text-neutral-600">Date:</span>
                 <span className="border-b border-neutral-400 pb-0.5 px-2 font-mono flex-1">
@@ -75,7 +75,7 @@ export const AmberGridTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Boxed Grid Table with Yellow Header */}
-        <div className="my-6 border-2 border-neutral-900">
+        <div data-invoice-cat="table" className="my-6 border-2 border-neutral-900">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="bg-[#FFD700] text-neutral-900 font-bold uppercase tracking-wider text-[11px] border-b-2 border-neutral-900">
@@ -116,7 +116,7 @@ export const AmberGridTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Yellow Total Block */}
-        <div className="flex justify-end my-4">
+        <div data-invoice-cat="total" className="flex justify-end my-4">
           <div className="flex border-2 border-neutral-900">
             <div className="bg-[#FFD700] px-6 py-2 text-xs font-bold text-neutral-900 uppercase tracking-wider border-r-2 border-neutral-900 flex items-center">
               total :

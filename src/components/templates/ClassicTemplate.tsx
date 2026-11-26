@@ -32,7 +32,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-white text-[#1f2937] p-8 md:p-12 font-serif min-h-[900px] flex flex-col justify-between border-8 border-double border-slate-200">
       <div>
         {/* Classic Header with Double Border */}
-        <div className="border-b-2 border-slate-800 pb-6 mb-6">
+        <div data-invoice-cat="header" className="border-b-2 border-slate-800 pb-6 mb-6">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-3xl font-bold uppercase tracking-wider text-slate-900">
@@ -63,7 +63,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Metadata Box */}
-        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-300 font-sans text-xs mb-6">
+        <div data-invoice-cat="body" className="grid grid-cols-2 gap-4 bg-slate-50 p-4 border border-slate-300 font-sans text-xs mb-6">
           <div>
             <div className="grid grid-cols-2 gap-1">
               <span className="font-semibold text-slate-700">Invoice No:</span>
@@ -87,7 +87,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Client & Issuer Columns */}
-        <div className="grid grid-cols-2 gap-8 mb-6 font-sans text-xs">
+        <div data-invoice-cat="body" className="grid grid-cols-2 gap-8 mb-6 font-sans text-xs">
           <div className="border-l-2 border-slate-400 pl-3">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block mb-1">
               Issued By
@@ -125,7 +125,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Traditional Framed Table */}
-        <div className="border border-slate-400 font-sans text-xs">
+        <div data-invoice-cat="table" className="border border-slate-400 font-sans text-xs">
           <table className="w-full text-left">
             <thead className="bg-slate-200 border-b border-slate-400 text-slate-800 font-bold uppercase tracking-wider text-[11px]">
               <tr>
@@ -161,7 +161,7 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Traditional Totals & Summary Block */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6 font-sans text-xs">
+        <div data-invoice-cat="total" className="flex flex-col sm:flex-row justify-between items-start gap-6 mt-6 font-sans text-xs">
           <div className="w-full sm:w-1/2 space-y-3">
             {business.bankDetails && (
               <div className="border border-slate-300 p-3 bg-slate-50">

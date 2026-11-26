@@ -14,7 +14,7 @@ interface TemplatesGalleryClientProps {
 // High-fidelity sample invoice used to render real template previews
 const sampleInvoice: InvoiceData = {
   invoiceNumber: "INV-2026-081",
-  templateId: "modern",
+  templateId: "classic",
   status: "sent",
   invoiceDate: "2026-11-20",
   dueDate: "2026-12-05",
@@ -92,12 +92,12 @@ export const TemplatesGalleryClient: React.FC<TemplatesGalleryClientProps> = ({
 
   const filteredTemplates = TEMPLATE_LIST.filter((tpl) => {
     if (filter === "all") return true;
-    if (filter === "modern")
-      return ["modern", "minimal", "wave", "compact"].includes(tpl.slug);
+    if (filter === "minimal")
+      return ["minimal", "wave", "compact"].includes(tpl.slug);
     if (filter === "corporate")
-      return ["corporate", "classic", "royal-blue", "navy-ledger"].includes(tpl.slug);
+      return ["corporate", "classic", "royal-blue"].includes(tpl.slug);
     if (filter === "creative")
-      return ["elegant", "agency-sidebar", "amber-grid", "crimson"].includes(tpl.slug);
+      return ["agency-sidebar", "amber-grid", "crimson"].includes(tpl.slug);
     return true;
   });
 
@@ -117,14 +117,14 @@ export const TemplatesGalleryClient: React.FC<TemplatesGalleryClientProps> = ({
             All Templates ({TEMPLATE_LIST.length})
           </button>
           <button
-            onClick={() => setFilter("modern")}
+            onClick={() => setFilter("minimal")}
             className={`px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              filter === "modern"
+              filter === "minimal"
                 ? "bg-white text-[#202124] shadow-2xs font-semibold"
                 : "text-[#70757A] hover:text-[#202124]"
             }`}
           >
-            Minimal & Modern
+            Minimal & Clean
           </button>
           <button
             onClick={() => setFilter("creative")}

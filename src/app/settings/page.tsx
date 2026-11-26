@@ -75,7 +75,7 @@ export default async function SettingsPage() {
           initialSettings={{
             currency: activeCurrency,
             dateFormat: settings?.dateFormat || "YYYY-MM-DD",
-            defaultTemplate: settings?.defaultTemplate || "modern",
+            defaultTemplate: settings?.defaultTemplate || "classic",
           }}
         />
 

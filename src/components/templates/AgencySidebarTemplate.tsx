@@ -36,7 +36,7 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       <div className="w-[240px] shrink-0 flex flex-col justify-between z-10 bg-[#1E2125] text-white p-6 shadow-sm">
         <div className="space-y-6">
           {/* Agency Brand Logo */}
-          <div className="flex items-center gap-2.5">
+          <div data-invoice-cat="header" className="flex items-center gap-2.5">
             {business.logoUrl ? (
               <div className="bg-white/10 rounded-lg p-1.5 flex items-center justify-center max-h-12 max-w-[130px] overflow-hidden border border-white/10">
                 <img
@@ -61,7 +61,7 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </div>
 
           {/* Invoice To Block */}
-          <div className="space-y-1 text-xs">
+          <div data-invoice-cat="body" className="space-y-1 text-xs">
             <span className="text-[9px] font-semibold text-[#9CA3AF] uppercase tracking-wider block">
               Invoice To:
             </span>
@@ -164,7 +164,7 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
       <div className="flex-1 min-w-0 p-6 md:p-8 flex flex-col justify-between relative bg-[#F4F5F7]">
         <div>
           {/* Top Header: INVOICE title & Total Due (stacked on the left exactly matching the reference) */}
-          <div className="flex justify-between items-start pb-5">
+          <div data-invoice-cat="header" className="flex justify-between items-start pb-5">
             <div className="space-y-2">
               <h1 className="text-4xl md:text-5xl font-black text-[#1C1E21] tracking-tight uppercase leading-none">
                 INVOICE
@@ -200,7 +200,7 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </div>
 
           {/* Rounded Terracotta Table Header */}
-          <div className="my-4 overflow-hidden rounded-xl bg-white shadow-2xs border border-[#E8E8E5]">
+          <div data-invoice-cat="table" className="my-4 overflow-hidden rounded-xl bg-white shadow-2xs border border-[#E8E8E5]">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-[#DE6838] text-white font-bold uppercase tracking-wider text-[11px]">
@@ -231,7 +231,7 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </div>
 
           {/* Totals Section */}
-          <div className="flex justify-end pt-3">
+          <div data-invoice-cat="total" className="flex justify-end pt-3">
             <div className="w-60 space-y-1.5 text-xs">
               <div className="flex justify-between text-[#70757A] px-2">
                 <span>Subtotal:</span>

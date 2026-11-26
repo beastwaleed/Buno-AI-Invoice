@@ -24,7 +24,7 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
     <div className="w-full bg-white text-[#202124] p-8 md:p-12 font-sans min-h-[900px] flex flex-col justify-between relative overflow-hidden">
       <div>
         {/* Header Bar */}
-        <div className="flex justify-between items-start pb-6">
+        <div data-invoice-cat="header" className="flex justify-between items-start pb-6">
           <div>
             {business.logoUrl ? (
               <img
@@ -50,7 +50,7 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Big Bold INVOICE Title */}
-        <div className="pt-4 pb-6">
+        <div data-invoice-cat="header" className="pt-4 pb-6">
           <h1 className="text-5xl font-black tracking-tight text-neutral-900">
             INVOICE
           </h1>
@@ -60,7 +60,7 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Billed To / From Split */}
-        <div className="grid grid-cols-2 gap-8 py-6 text-xs text-neutral-600">
+        <div data-invoice-cat="body" className="grid grid-cols-2 gap-8 py-6 text-xs text-neutral-600">
           <div>
             <span className="font-bold text-neutral-900 block mb-1">Billed to:</span>
             <p className="font-semibold text-neutral-800">{customer?.name || "Client"}</p>
@@ -89,7 +89,7 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         </div>
 
         {/* Table with subtle gray header */}
-        <div className="my-4">
+        <div data-invoice-cat="table" className="my-4">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="bg-neutral-100 text-neutral-700 font-semibold text-[11px]">
@@ -120,14 +120,14 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </table>
 
           {/* Total row with underline */}
-          <div className="flex justify-between items-center py-4 border-t border-b border-neutral-300 font-bold text-sm text-neutral-900 mt-2 px-3">
+          <div data-invoice-cat="total" className="flex justify-between items-center py-4 border-t border-b border-neutral-300 font-bold text-sm text-neutral-900 mt-2 px-3">
             <span>Total</span>
             <span className="font-mono text-base">{formatCurrency(total, currency)}</span>
           </div>
         </div>
 
         {/* Payment & Notes */}
-        <div className="text-xs text-neutral-600 space-y-1.5 pt-4">
+        <div data-invoice-cat="total" className="text-xs text-neutral-600 space-y-1.5 pt-4">
           {paymentTerms && (
             <p>
               <span className="font-bold text-neutral-900">Payment terms:</span>{" "}

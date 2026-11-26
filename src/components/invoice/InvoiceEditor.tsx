@@ -21,6 +21,9 @@ import {
   ArrowLeft,
   CheckCircle2,
   Crop as CropIcon,
+  Type,
+  RotateCcw,
+  Sliders,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -57,6 +60,46 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const [customers, setCustomers] = useState<CustomerData[]>(initialCustomers || []);
   const [isSaving, setIsSaving] = useState(false);
   const [zoomLevel, setZoomLevel] = useState<number>(100);
+  const [fontPanelOpen, setFontPanelOpen] = useState(false);
+
+  const handleUpdateFontSize = (
+    category: "header" | "body" | "table" | "total",
+    delta: number
+  ) => {
+    setInvoice((prev) => {
+      const current = prev.fontSizeConfig || { header: 1.0, body: 1.0, table: 1.0, total: 1.0 };
+      const currentVal = current[category] || 1.0;
+      const nextVal = Math.max(0.7, Math.min(1.8, Math.round((currentVal + delta) * 10) / 10));
+      return {
+        ...prev,
+        fontSizeConfig: {
+          ...current,
+          [category]: nextVal,
+        },
+      };
+    });
+  };
+
+  const handleSetCategoryScale = (
+    category: "header" | "body" | "table" | "total",
+    scale: number
+  ) => {
+    setInvoice((prev) => ({
+      ...prev,
+      fontSizeConfig: {
+        ...(prev.fontSizeConfig || { header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
+        [category]: scale,
+      },
+    }));
+  };
+
+  const handleResetFontSizes = () => {
+    setInvoice((prev) => ({
+      ...prev,
+      fontSizeConfig: { header: 1.0, body: 1.0, table: 1.0, total: 1.0 },
+    }));
+    toast.success("Font sizes reset to 100%");
+  };
 
   // Auto-calculate exact scale to fit mobile or desktop screen width without overflow
   const handleFitScreen = () => {
@@ -104,6 +147,16 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     if (initialInvoice) {
       return {
         ...initialInvoice,
+        templateId:
+          initialInvoice.templateId === "modern" || initialInvoice.templateId === "elegant"
+            ? "classic"
+            : initialInvoice.templateId,
+        fontSizeConfig: initialInvoice.fontSizeConfig || {
+          header: 1.0,
+          body: 1.0,
+          table: 1.0,
+          total: 1.0,
+        },
         business: {
           ...initialInvoice.business,
           businessName: initialInvoice.business?.businessName || businessProfile?.businessName || "My Business",
@@ -135,7 +188,13 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
 
     return {
       invoiceNumber: `${prefix}${nextNum}`,
-      templateId: (initialTemplate as TemplateId) || businessProfile?.defaultTemplate || "modern",
+      templateId: (initialTemplate as TemplateId) || businessProfile?.defaultTemplate || "classic",
+      fontSizeConfig: {
+        header: 1.0,
+        body: 1.0,
+        table: 1.0,
+        total: 1.0,
+      },
       status: "draft",
       invoiceDate: new Date().toISOString().split("T")[0],
       dueDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
@@ -1253,7 +1312,259 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 <Maximize2 className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {/* Font Sizes Toggle Button */}
+            <div className="flex items-center gap-1 border-l border-[#E8E8E5] pl-2">
+              <button
+                type="button"
+                onClick={() => setFontPanelOpen(!fontPanelOpen)}
+                className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all ${
+                  fontPanelOpen
+                    ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
+                    : "bg-white text-[#475569] border-[#E8E8E5] hover:text-[#0F172A] hover:bg-[#F8FAFC]"
+                }`}
+                title="Adjust font size for each text category on the invoice"
+              >
+                <Type className="w-3.5 h-3.5" />
+                <span>Font Sizes</span>
+                {(invoice.fontSizeConfig?.header !== 1.0 ||
+                  invoice.fontSizeConfig?.body !== 1.0 ||
+                  invoice.fontSizeConfig?.table !== 1.0 ||
+                  invoice.fontSizeConfig?.total !== 1.0) && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-600" />
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Font Sizes Customization Panel for Each Text Category */}
+          {fontPanelOpen && (
+            <div className="p-4 rounded-xl bg-white border border-[#E8E8E5] shadow-card space-y-3.5 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-[#F0F0EE] pb-2.5">
+                <div className="flex items-center gap-2">
+                  <Type className="w-4 h-4 text-blue-600" />
+                  <span className="text-xs font-bold text-[#0F172A]">
+                    Invoice Font Scaling (Per Category)
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleResetFontSizes}
+                  className="inline-flex items-center gap-1 text-[11px] font-medium text-[#64748B] hover:text-[#0F172A] transition-colors"
+                  title="Reset all font scales to 100%"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Reset All</span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* 1. Header & Brand Title */}
+                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-[#0F172A] block">
+                        Header & Title
+                      </span>
+                      <span className="text-[10px] text-[#64748B]">
+                        INVOICE title, company name
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                      {Math.round((invoice.fontSizeConfig?.header || 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("header", -0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Decrease header font size"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("header", 0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Increase header font size"
+                    >
+                      +
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
+                        <button
+                          key={scale}
+                          type="button"
+                          onClick={() => handleSetCategoryScale("header", scale)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                            (invoice.fontSizeConfig?.header || 1.0) === scale
+                              ? "bg-blue-600 text-white font-bold"
+                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
+                          }`}
+                        >
+                          {Math.round(scale * 100)}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Body & Addresses */}
+                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-[#0F172A] block">
+                        Body & Addresses
+                      </span>
+                      <span className="text-[10px] text-[#64748B]">
+                        Billed to, dates, metadata
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                      {Math.round((invoice.fontSizeConfig?.body || 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("body", -0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Decrease body font size"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("body", 0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Increase body font size"
+                    >
+                      +
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
+                        <button
+                          key={scale}
+                          type="button"
+                          onClick={() => handleSetCategoryScale("body", scale)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                            (invoice.fontSizeConfig?.body || 1.0) === scale
+                              ? "bg-blue-600 text-white font-bold"
+                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
+                          }`}
+                        >
+                          {Math.round(scale * 100)}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Table & Deliverables */}
+                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-[#0F172A] block">
+                        Table & Items
+                      </span>
+                      <span className="text-[10px] text-[#64748B]">
+                        Item descriptions, rates, totals
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                      {Math.round((invoice.fontSizeConfig?.table || 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("table", -0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Decrease table font size"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("table", 0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Increase table font size"
+                    >
+                      +
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
+                        <button
+                          key={scale}
+                          type="button"
+                          onClick={() => handleSetCategoryScale("table", scale)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                            (invoice.fontSizeConfig?.table || 1.0) === scale
+                              ? "bg-blue-600 text-white font-bold"
+                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
+                          }`}
+                        >
+                          {Math.round(scale * 100)}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Totals & Summary */}
+                <div className="p-3 rounded-lg bg-[#F8FAFC] border border-[#E2E8F0] space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="font-semibold text-[#0F172A] block">
+                        Totals & Summary
+                      </span>
+                      <span className="text-[10px] text-[#64748B]">
+                        Subtotal, taxes, balance due, terms
+                      </span>
+                    </div>
+                    <span className="font-mono text-xs font-bold text-blue-600 bg-white px-2 py-0.5 rounded border border-[#E2E8F0]">
+                      {Math.round((invoice.fontSizeConfig?.total || 1.0) * 100)}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("total", -0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Decrease totals font size"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateFontSize("total", 0.1)}
+                      className="px-2 py-1 rounded bg-white border border-[#E2E8F0] text-xs font-bold hover:bg-[#F1F3F5] text-[#0F172A] transition-colors"
+                      title="Increase totals font size"
+                    >
+                      +
+                    </button>
+                    <div className="flex items-center gap-1 ml-auto">
+                      {[1.0, 1.15, 1.3, 1.5].map((scale) => (
+                        <button
+                          key={scale}
+                          type="button"
+                          onClick={() => handleSetCategoryScale("total", scale)}
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors ${
+                            (invoice.fontSizeConfig?.total || 1.0) === scale
+                              ? "bg-blue-600 text-white font-bold"
+                              : "bg-white text-[#64748B] border border-[#E2E8F0] hover:bg-[#F1F3F5]"
+                          }`}
+                        >
+                          {Math.round(scale * 100)}%
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Sticky Document Wrapper */}
           <div className="lg:sticky lg:top-24 overflow-x-auto pb-12 w-full">
@@ -1274,7 +1585,11 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
               >
                 {/* Document Element targeted by PDF and PNG exporter */}
                 <div id="invoice-preview-document" className="w-[760px] bg-white">
-                  <InvoiceRenderer invoice={invoice} templateId={invoice.templateId} />
+                  <InvoiceRenderer
+                    invoice={invoice}
+                    templateId={invoice.templateId}
+                    fontSizeConfig={invoice.fontSizeConfig}
+                  />
                 </div>
               </div>
             </div>
