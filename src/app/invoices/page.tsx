@@ -13,15 +13,25 @@ export default async function InvoicesPage() {
     redirect("/auth/login");
   }
 
-  const invoices = await prisma.invoice.findMany({
-    where: { userId: user.id },
-    include: {
-      customer: true,
-      items: true,
-      payments: true,
-    },
-    orderBy: { invoiceDate: "desc" },
-  });
+  const [invoices, profile, settings] = await Promise.all([
+    prisma.invoice.findMany({
+      where: { userId: user.id },
+      include: {
+        customer: true,
+        items: true,
+        payments: true,
+      },
+      orderBy: { invoiceDate: "desc" },
+    }),
+    prisma.businessProfile.findUnique({
+      where: { userId: user.id },
+    }),
+    prisma.userSettings.findUnique({
+      where: { userId: user.id },
+    }),
+  ]);
+
+  const businessCurrency = profile?.defaultCurrency || settings?.currency || "USD";
 
   return (
     <AppShell
@@ -29,7 +39,11 @@ export default async function InvoicesPage() {
       title="Invoices & History"
       subtitle="Manage, track, duplicate, record payments, and export your invoices."
     >
-      <InvoiceListClient initialInvoices={invoices} />
+      <InvoiceListClient
+        initialInvoices={invoices}
+        businessCurrency={businessCurrency}
+        businessProfile={profile}
+      />
     </AppShell>
   );
 }

@@ -12,6 +12,8 @@ import {
   Copy,
   Trash2,
   DollarSign,
+  CreditCard,
+  Receipt,
   Sparkles,
   Download,
   Printer,
@@ -21,23 +23,36 @@ import {
   AlertCircle,
   Clock,
   ArrowUpDown,
+  Calendar,
+  Building,
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { exportToPdf, exportToPng, exportToJpeg, triggerPrint } from "@/lib/export";
 
 interface InvoiceListClientProps {
   initialInvoices: any[];
+  businessCurrency?: string;
+  businessProfile?: any;
 }
 
 export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
   initialInvoices,
+  businessCurrency = "USD",
+  businessProfile,
 }) => {
   const router = useRouter();
   const [invoices, setInvoices] = useState<any[]>(initialInvoices);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("date-desc");
+
+  // Display currency from business profile or fallback
+  const displayCurrency = businessCurrency || "USD";
+
+  // Financial summary metrics
+  const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.total) || 0), 0);
+  const totalOutstanding = invoices.reduce((sum, i) => sum + (Number(i.balanceDue) || 0), 0);
+  const totalCollected = Math.max(0, totalInvoiced - totalOutstanding);
 
   // Payment Recording Modal
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
@@ -179,10 +194,10 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
             customerName: selectedInvoiceForReminder.customer?.name || "Client",
             totalFormatted: formatCurrency(
               selectedInvoiceForReminder.balanceDue || selectedInvoiceForReminder.total,
-              selectedInvoiceForReminder.currency
+              displayCurrency
             ),
             dueDateFormatted: formatDate(selectedInvoiceForReminder.dueDate),
-            businessName: "Our Accounts Team",
+            businessName: businessProfile?.companyName || "Our Accounts Team",
           },
         }),
       });
@@ -200,26 +215,65 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Financial Summary Strip */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="bg-white p-4 rounded-xl border border-[#E8E8E5] shadow-subtle flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#70757A] uppercase tracking-wider">Total Invoiced</p>
+            <p className="font-mono font-bold text-lg text-[#202124] mt-0.5">
+              {formatCurrency(totalInvoiced, displayCurrency)}
+            </p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-blue-50 text-[#4468E8] flex items-center justify-center shrink-0">
+            <Receipt className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-[#E8E8E5] shadow-subtle flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#70757A] uppercase tracking-wider">Collected</p>
+            <p className="font-mono font-bold text-lg text-emerald-600 mt-0.5">
+              {formatCurrency(totalCollected, displayCurrency)}
+            </p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-4 h-4" />
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-xl border border-[#E8E8E5] shadow-subtle flex items-center justify-between">
+          <div>
+            <p className="text-[11px] font-semibold text-[#70757A] uppercase tracking-wider">Outstanding Balance</p>
+            <p className="font-mono font-bold text-lg text-amber-700 mt-0.5">
+              {formatCurrency(totalOutstanding, displayCurrency)}
+            </p>
+          </div>
+          <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
+            <AlertCircle className="w-4 h-4" />
+          </div>
+        </div>
+      </div>
+
       {/* Controls: Search, Filter, Sort, New Action */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 rounded-xl border border-[#E8E8E5] shadow-subtle">
-        <div className="flex flex-1 items-center gap-3">
-          <div className="relative flex-1 max-w-sm">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E8E8E5] shadow-subtle">
+        <div className="flex flex-col sm:flex-row flex-1 items-stretch sm:items-center gap-2.5">
+          <div className="relative flex-1">
             <Search className="w-4 h-4 text-[#70757A] absolute left-3 top-2.5" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by invoice # or client..."
-              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+              className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-[#E8E8E5] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20 bg-[#FAFAF8] focus:bg-white"
             />
           </div>
 
-          {/* Status Filter */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2">
+            {/* Status Filter */}
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+              className="flex-1 sm:flex-none px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
             >
               <option value="all">All Statuses</option>
               <option value="draft">Draft</option>
@@ -229,14 +283,12 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
               <option value="overdue">Overdue</option>
               <option value="cancelled">Cancelled</option>
             </select>
-          </div>
 
-          {/* Sort By */}
-          <div className="hidden md:flex items-center gap-1.5">
+            {/* Sort By */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+              className="flex-1 sm:flex-none px-3 py-2 text-xs rounded-lg border border-[#E8E8E5] bg-white text-[#202124] focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
             >
               <option value="date-desc">Newest First</option>
               <option value="date-asc">Oldest First</option>
@@ -248,14 +300,14 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
 
         <Link
           href="/invoices/new"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#4468E8] hover:bg-[#3455D1] text-white rounded-lg text-xs font-medium shadow-xs transition-all"
+          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#4468E8] hover:bg-[#3455D1] text-white rounded-lg text-xs font-medium shadow-xs transition-all shrink-0"
         >
           <Plus className="w-3.5 h-3.5" />
           <span>New Invoice</span>
         </Link>
       </div>
 
-      {/* Invoices Table */}
+      {/* Invoices List / Table */}
       <div className="bg-white rounded-2xl border border-[#E8E8E5] shadow-subtle overflow-hidden">
         {filteredInvoices.length === 0 ? (
           <div className="py-16 text-center">
@@ -278,148 +330,288 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead>
-                <tr className="border-b border-[#E8E8E5] bg-[#FAFAF8] text-[11px] font-semibold text-[#70757A] uppercase tracking-wider">
-                  <th className="py-3 px-4">Invoice</th>
-                  <th className="py-3 px-4">Client</th>
-                  <th className="py-3 px-4">Issue Date</th>
-                  <th className="py-3 px-4">Due Date</th>
-                  <th className="py-3 px-4">Status</th>
-                  <th className="py-3 px-4 text-right">Total</th>
-                  <th className="py-3 px-4 text-right">Due</th>
-                  <th className="py-3 px-4 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F0F0EE]">
-                {filteredInvoices.map((inv) => (
-                  <tr key={inv.id} className="hover:bg-[#FAFAF8] transition-colors group">
-                    <td className="py-3.5 px-4 font-mono font-medium text-[#202124]">
-                      <Link
-                        href={`/invoices/${inv.id}/edit`}
-                        className="hover:text-[#4468E8]"
-                      >
-                        {inv.invoiceNumber}
-                      </Link>
-                    </td>
+          <>
+            {/* Mobile Cards View (< 768px) */}
+            <div className="block md:hidden divide-y divide-[#F0F0EE]">
+              {filteredInvoices.map((inv) => (
+                <div key={inv.id} className="p-4 space-y-3 hover:bg-[#FAFAF8] transition-colors">
+                  {/* Row 1: Invoice Number & Status Pill */}
+                  <div className="flex items-center justify-between gap-2">
+                    <Link
+                      href={`/invoices/${inv.id}/edit`}
+                      className="font-mono font-bold text-sm text-[#202124] hover:text-[#4468E8]"
+                    >
+                      {inv.invoiceNumber}
+                    </Link>
+                    <span
+                      className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                        inv.status === "paid"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
+                          : inv.status === "partially_paid"
+                          ? "bg-amber-50 text-amber-700 border border-amber-200/50"
+                          : inv.status === "overdue"
+                          ? "bg-rose-50 text-rose-700 border border-rose-200/50"
+                          : inv.status === "sent"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200/50"
+                          : "bg-slate-100 text-slate-700 border border-slate-200/50"
+                      }`}
+                    >
+                      {inv.status.replace("_", " ")}
+                    </span>
+                  </div>
 
-                    <td className="py-3.5 px-4">
-                      <div className="font-medium text-[#202124]">
-                        {inv.customer?.name || "Unassigned"}
+                  {/* Row 2: Customer & Dates */}
+                  <div className="flex items-start justify-between text-xs gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="font-medium text-[#202124] truncate">
+                        {inv.customer?.name || "Unassigned Client"}
                       </div>
                       {inv.customer?.companyName && (
-                        <div className="text-[10px] text-[#70757A]">
+                        <div className="text-[11px] text-[#70757A] truncate">
                           {inv.customer.companyName}
                         </div>
                       )}
-                    </td>
+                    </div>
+                    <div className="text-right text-[11px] text-[#70757A] shrink-0 space-y-0.5">
+                      <div>Issued: {formatDate(inv.invoiceDate)}</div>
+                      {inv.dueDate && <div>Due: {formatDate(inv.dueDate)}</div>}
+                    </div>
+                  </div>
 
-                    <td className="py-3.5 px-4 text-[#70757A]">
-                      {formatDate(inv.invoiceDate)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-[#70757A]">
-                      {formatDate(inv.dueDate)}
-                    </td>
-
-                    <td className="py-3.5 px-4">
-                      <span
-                        className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                          inv.status === "paid"
-                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
-                            : inv.status === "partially_paid"
-                            ? "bg-amber-50 text-amber-700 border border-amber-200/50"
-                            : inv.status === "overdue"
-                            ? "bg-rose-50 text-rose-700 border border-rose-200/50"
-                            : inv.status === "sent"
-                            ? "bg-blue-50 text-blue-700 border border-blue-200/50"
-                            : "bg-slate-100 text-slate-700 border border-slate-200/50"
-                        }`}
-                      >
-                        {inv.status.replace("_", " ")}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right font-mono font-medium text-[#202124]">
-                      {formatCurrency(inv.total, inv.currency)}
-                    </td>
-
-                    <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#202124]">
-                      {inv.balanceDue > 0 ? (
-                        <span className="text-amber-700">
-                          {formatCurrency(inv.balanceDue, inv.currency)}
-                        </span>
-                      ) : (
-                        <span className="text-emerald-600 font-normal">Paid</span>
-                      )}
-                    </td>
-
-                    {/* Action Buttons */}
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        {inv.balanceDue > 0 && (
-                          <>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedInvoiceForPayment(inv);
-                                setPaymentAmount(inv.balanceDue.toString());
-                                setPaymentModalOpen(true);
-                              }}
-                              title="Record Payment"
-                              className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
-                            >
-                              <DollarSign className="w-4 h-4" />
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setSelectedInvoiceForReminder(inv);
-                                setAiReminderModalOpen(true);
-                                handleGenerateAiReminder("polite");
-                              }}
-                              title="AI Payment Reminder"
-                              className="p-1.5 text-[#4468E8] hover:bg-blue-50 rounded-lg transition-colors"
-                            >
-                              <Sparkles className="w-4 h-4" />
-                            </button>
-                          </>
+                  {/* Row 3: Financial Summary Box */}
+                  <div className="flex items-center justify-between p-2.5 rounded-xl bg-[#FAFAF8] border border-[#E8E8E5]/70">
+                    <div>
+                      <div className="text-[10px] text-[#70757A] font-medium uppercase tracking-wider">Total</div>
+                      <div className="font-mono font-bold text-sm text-[#202124]">
+                        {formatCurrency(inv.total, displayCurrency)}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] text-[#70757A] font-medium uppercase tracking-wider">Balance Due</div>
+                      <div className="font-mono font-bold text-sm">
+                        {inv.balanceDue > 0 ? (
+                          <span className="text-amber-700">
+                            {formatCurrency(inv.balanceDue, displayCurrency)}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-600 font-semibold text-xs flex items-center gap-1 justify-end">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> Fully Paid
+                          </span>
                         )}
+                      </div>
+                    </div>
+                  </div>
 
+                  {/* Row 4: Action Buttons */}
+                  <div className="flex items-center justify-between gap-1.5 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      {inv.balanceDue > 0 && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInvoiceForPayment(inv);
+                              setPaymentAmount(inv.balanceDue.toString());
+                              setPaymentModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-emerald-700 bg-emerald-50 hover:bg-emerald-100 rounded-lg transition-colors border border-emerald-200/50"
+                          >
+                            <CreditCard className="w-3.5 h-3.5" />
+                            <span>Pay</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedInvoiceForReminder(inv);
+                              setAiReminderModalOpen(true);
+                              handleGenerateAiReminder("polite");
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-[#4468E8] bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors border border-blue-200/50"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Reminder</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1 ml-auto">
+                      <Link
+                        href={`/invoices/${inv.id}/edit`}
+                        title="Edit Invoice"
+                        className="p-2 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                      >
+                        <FileEdit className="w-4 h-4" />
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDuplicate(inv.id)}
+                        title="Duplicate Invoice"
+                        className="p-2 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(inv.id)}
+                        title="Delete Invoice"
+                        className="p-2 text-[#70757A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View (>= 768px) */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-[#E8E8E5] bg-[#FAFAF8] text-[11px] font-semibold text-[#70757A] uppercase tracking-wider">
+                    <th className="py-3 px-4">Invoice</th>
+                    <th className="py-3 px-4">Client</th>
+                    <th className="py-3 px-4">Issue Date</th>
+                    <th className="py-3 px-4">Due Date</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Total</th>
+                    <th className="py-3 px-4 text-right">Due</th>
+                    <th className="py-3 px-4 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#F0F0EE]">
+                  {filteredInvoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-[#FAFAF8] transition-colors group">
+                      <td className="py-3.5 px-4 font-mono font-medium text-[#202124]">
                         <Link
                           href={`/invoices/${inv.id}/edit`}
-                          title="Edit Invoice"
-                          className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                          className="hover:text-[#4468E8]"
                         >
-                          <FileEdit className="w-4 h-4" />
+                          {inv.invoiceNumber}
                         </Link>
+                      </td>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDuplicate(inv.id)}
-                          title="Duplicate Invoice"
-                          className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
+                      <td className="py-3.5 px-4">
+                        <div className="font-medium text-[#202124]">
+                          {inv.customer?.name || "Unassigned"}
+                        </div>
+                        {inv.customer?.companyName && (
+                          <div className="text-[10px] text-[#70757A]">
+                            {inv.customer.companyName}
+                          </div>
+                        )}
+                      </td>
 
-                        <button
-                          type="button"
-                          onClick={() => handleDelete(inv.id)}
-                          title="Delete Invoice"
-                          className="p-1.5 text-[#70757A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      <td className="py-3.5 px-4 text-[#70757A]">
+                        {formatDate(inv.invoiceDate)}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-[#70757A]">
+                        {formatDate(inv.dueDate)}
+                      </td>
+
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
+                            inv.status === "paid"
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200/50"
+                              : inv.status === "partially_paid"
+                              ? "bg-amber-50 text-amber-700 border border-amber-200/50"
+                              : inv.status === "overdue"
+                              ? "bg-rose-50 text-rose-700 border border-rose-200/50"
+                              : inv.status === "sent"
+                              ? "bg-blue-50 text-blue-700 border border-blue-200/50"
+                              : "bg-slate-100 text-slate-700 border border-slate-200/50"
+                          }`}
                         >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                          {inv.status.replace("_", " ")}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono font-medium text-[#202124]">
+                        {formatCurrency(inv.total, displayCurrency)}
+                      </td>
+
+                      <td className="py-3.5 px-4 text-right font-mono font-semibold text-[#202124]">
+                        {inv.balanceDue > 0 ? (
+                          <span className="text-amber-700">
+                            {formatCurrency(inv.balanceDue, displayCurrency)}
+                          </span>
+                        ) : (
+                          <span className="text-emerald-600 font-normal">Paid</span>
+                        )}
+                      </td>
+
+                      {/* Action Buttons */}
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {inv.balanceDue > 0 && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedInvoiceForPayment(inv);
+                                  setPaymentAmount(inv.balanceDue.toString());
+                                  setPaymentModalOpen(true);
+                                }}
+                                title="Record Payment"
+                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSelectedInvoiceForReminder(inv);
+                                  setAiReminderModalOpen(true);
+                                  handleGenerateAiReminder("polite");
+                                }}
+                                title="AI Payment Reminder"
+                                className="p-1.5 text-[#4468E8] hover:bg-blue-50 rounded-lg transition-colors"
+                              >
+                                <Sparkles className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+
+                          <Link
+                            href={`/invoices/${inv.id}/edit`}
+                            title="Edit Invoice"
+                            className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                          >
+                            <FileEdit className="w-4 h-4" />
+                          </Link>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDuplicate(inv.id)}
+                            title="Duplicate Invoice"
+                            className="p-1.5 text-[#70757A] hover:text-[#202124] hover:bg-[#F5F5F3] rounded-lg transition-colors"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(inv.id)}
+                            title="Delete Invoice"
+                            className="p-1.5 text-[#70757A] hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 
@@ -429,7 +621,7 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
           <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-elevated border border-[#E8E8E5] space-y-4 animate-in fade-in zoom-in-95">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <DollarSign className="w-5 h-5" />
+                <CreditCard className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="font-serif font-bold text-base text-[#202124]">
@@ -440,7 +632,7 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
                   <span className="font-mono font-bold text-[#202124]">
                     {formatCurrency(
                       selectedInvoiceForPayment.balanceDue,
-                      selectedInvoiceForPayment.currency
+                      displayCurrency
                     )}
                   </span>
                 </p>
@@ -450,7 +642,7 @@ export const InvoiceListClient: React.FC<InvoiceListClientProps> = ({
             <div className="space-y-3">
               <div>
                 <label className="block text-xs font-medium text-[#202124] mb-1">
-                  Payment Amount ({selectedInvoiceForPayment.currency}) <span className="text-red-500">*</span>
+                  Payment Amount ({displayCurrency}) <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
