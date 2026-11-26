@@ -27,11 +27,14 @@ export const AmberGridTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="flex justify-between items-start pb-8">
           <div>
             {business.logoUrl ? (
-              <img
-                src={business.logoUrl}
-                alt={business.businessName}
-                className="h-10 w-auto object-contain mb-3 max-w-[140px]"
-              />
+              <div data-invoice-cat="logo" className="inline-block">
+                <img
+                  src={business.logoUrl}
+                  alt={business.businessName}
+                  data-invoice-logo="true"
+                  className="h-10 w-auto object-contain mb-3 max-w-[140px]"
+                />
+              </div>
             ) : null}
             <h1 className="text-4xl font-extrabold text-neutral-900 tracking-tight">
               Invoice

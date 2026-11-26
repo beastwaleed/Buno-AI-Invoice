@@ -35,11 +35,14 @@ export const MinimalTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="flex justify-between items-start pb-12">
           <div>
             {business.logoUrl ? (
-              <img
-                src={business.logoUrl}
-                alt={business.businessName}
-                className="h-10 w-auto object-contain mb-3"
-              />
+              <div data-invoice-cat="logo" className="inline-block">
+                <img
+                  src={business.logoUrl}
+                  alt={business.businessName}
+                  data-invoice-logo="true"
+                  className="h-10 w-auto object-contain mb-3"
+                />
+              </div>
             ) : null}
             <h1 className="text-2xl font-normal tracking-tight">
               {business.businessName || "Invoice"}

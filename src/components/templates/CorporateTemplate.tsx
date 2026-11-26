@@ -38,11 +38,14 @@ export const CorporateTemplate: React.FC<TemplateProps> = ({
         <div data-invoice-cat="header" className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-8 border-b border-slate-200">
           <div className="flex items-center gap-4">
             {business.logoUrl ? (
-              <img
-                src={business.logoUrl}
-                alt={business.businessName}
-                className="h-14 w-auto object-contain"
-              />
+              <div data-invoice-cat="logo" className="inline-block">
+                <img
+                  src={business.logoUrl}
+                  alt={business.businessName}
+                  data-invoice-logo="true"
+                  className="h-14 w-auto object-contain"
+                />
+              </div>
             ) : (
               <div className="h-12 px-4 rounded bg-[#1E3A5F] text-white flex items-center font-bold tracking-widest text-lg">
                 {business.businessName?.slice(0, 4).toUpperCase() || "CORP"}

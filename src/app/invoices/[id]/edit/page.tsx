@@ -39,13 +39,21 @@ export default async function EditInvoicePage({
     notFound();
   }
 
+  let parsedBusinessSnapshot: any = {};
+  try {
+    if (invoice.businessSnapshot) {
+      parsedBusinessSnapshot = JSON.parse(invoice.businessSnapshot);
+    }
+  } catch {}
+
   const formattedInvoice: any = {
     ...invoice,
+    fontSizeConfig: parsedBusinessSnapshot.fontSizeConfig || undefined,
     invoiceDate: invoice.invoiceDate.toISOString().split("T")[0],
     dueDate: invoice.dueDate.toISOString().split("T")[0],
-    business: profile || {
-      businessName: "My Business",
-      email: "billing@example.com",
+    business: {
+      ...(profile || {}),
+      ...(parsedBusinessSnapshot || {}),
     },
   };
 

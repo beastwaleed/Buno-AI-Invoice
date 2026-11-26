@@ -97,6 +97,7 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
   const bodyScale = fontSizes.body || 1.0;
   const tableScale = fontSizes.table || 1.0;
   const totalScale = fontSizes.total || 1.0;
+  const logoScale = fontSizes.logo || 1.0;
 
   const renderTemplateContent = () => {
     switch (selectedTemplate.toLowerCase()) {
@@ -131,6 +132,17 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
             .invoice-render-wrapper [data-invoice-cat="body"] { --cat-scale: ${bodyScale}; }
             .invoice-render-wrapper [data-invoice-cat="table"] { --cat-scale: ${tableScale}; }
             .invoice-render-wrapper [data-invoice-cat="total"] { --cat-scale: ${totalScale}; }
+            .invoice-render-wrapper [data-invoice-cat="logo"] { --logo-scale: ${logoScale}; }
+
+            .invoice-render-wrapper [data-invoice-cat="logo"] img,
+            .invoice-render-wrapper img[data-invoice-logo="true"] {
+              height: calc(3.2rem * var(--logo-scale, 1)) !important;
+              max-height: calc(8rem * var(--logo-scale, 1)) !important;
+              width: auto !important;
+              max-width: calc(20rem * var(--logo-scale, 1)) !important;
+              object-fit: contain !important;
+              transition: height 0.1s ease-out, max-height 0.1s ease-out;
+            }
 
             .invoice-render-wrapper [data-invoice-cat] .text-4xl { font-size: calc(2.25rem * var(--cat-scale, 1)) !important; line-height: calc(2.5rem * var(--cat-scale, 1)) !important; }
             .invoice-render-wrapper [data-invoice-cat] .text-3xl { font-size: calc(1.875rem * var(--cat-scale, 1)) !important; line-height: calc(2.25rem * var(--cat-scale, 1)) !important; }
@@ -150,6 +162,22 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
             .invoice-render-wrapper [data-invoice-cat="table"] table th,
             .invoice-render-wrapper [data-invoice-cat="table"] table td {
               font-size: calc(0.75rem * var(--cat-scale, 1));
+            }
+
+            #invoice-preview-document [data-invoice-cat] {
+              cursor: pointer;
+              transition: outline 0.15s ease-in-out;
+            }
+            #invoice-preview-document [data-invoice-cat]:hover {
+              outline: 1.5px dashed rgba(59, 130, 246, 0.45);
+              outline-offset: 3px;
+              border-radius: 4px;
+            }
+            @media print {
+              #invoice-preview-document [data-invoice-cat] {
+                outline: none !important;
+                cursor: default !important;
+              }
             }
           `,
         }}

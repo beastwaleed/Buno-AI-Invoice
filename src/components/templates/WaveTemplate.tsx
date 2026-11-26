@@ -27,11 +27,14 @@ export const WaveTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="flex justify-between items-start pb-6">
           <div>
             {business.logoUrl ? (
-              <img
-                src={business.logoUrl}
-                alt={business.businessName}
-                className="h-10 w-auto object-contain mb-2"
-              />
+              <div data-invoice-cat="logo" className="inline-block">
+                <img
+                  src={business.logoUrl}
+                  alt={business.businessName}
+                  data-invoice-logo="true"
+                  className="h-10 w-auto object-contain mb-2"
+                />
+              </div>
             ) : (
               <div className="text-xs font-bold tracking-widest uppercase text-neutral-400">
                 YOUR LOGO

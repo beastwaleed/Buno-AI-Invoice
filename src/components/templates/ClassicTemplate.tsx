@@ -44,11 +44,14 @@ export const ClassicTemplate: React.FC<TemplateProps> = ({ invoice }) => {
             </div>
             <div className="text-right">
               {business.logoUrl ? (
-                <img
-                  src={business.logoUrl}
-                  alt={business.businessName}
-                  className="h-12 w-auto object-contain ml-auto mb-2"
-                />
+                <div data-invoice-cat="logo" className="inline-block">
+                  <img
+                    src={business.logoUrl}
+                    alt={business.businessName}
+                    data-invoice-logo="true"
+                    className="h-12 w-auto object-contain ml-auto mb-2"
+                  />
+                </div>
               ) : null}
               <div className="text-xl font-bold font-sans text-slate-800">
                 {business.businessName}

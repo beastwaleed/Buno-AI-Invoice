@@ -38,12 +38,15 @@ export const AgencySidebarTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           {/* Agency Brand Logo */}
           <div data-invoice-cat="header" className="flex items-center gap-2.5">
             {business.logoUrl ? (
-              <div className="bg-white/10 rounded-lg p-1.5 flex items-center justify-center max-h-12 max-w-[130px] overflow-hidden border border-white/10">
-                <img
-                  src={business.logoUrl}
-                  alt={business.businessName}
-                  className="max-h-9 max-w-full object-contain"
-                />
+              <div data-invoice-cat="logo" className="inline-block">
+                <div className="bg-white/10 rounded-lg p-1.5 flex items-center justify-center max-h-16 max-w-[160px] overflow-hidden border border-white/10">
+                  <img
+                    src={business.logoUrl}
+                    alt={business.businessName}
+                    data-invoice-logo="true"
+                    className="max-h-9 max-w-full object-contain"
+                  />
+                </div>
               </div>
             ) : (
               <div className="w-8 h-8 rounded-lg bg-[#DE6838] flex items-center justify-center text-white font-black text-sm shadow-sm">

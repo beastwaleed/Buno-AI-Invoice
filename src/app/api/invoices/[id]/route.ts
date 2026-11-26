@@ -62,6 +62,7 @@ export async function PUT(
       notes,
       paymentTerms,
       items = [],
+      fontSizeConfig,
     } = body;
 
     // Recalculate deterministic line totals
@@ -90,6 +91,16 @@ export async function PUT(
         where: { invoiceId: params.id },
       });
 
+      const existing = await tx.invoice.findUnique({
+        where: { id: params.id },
+        select: { businessSnapshot: true },
+      });
+      let snap: any = {};
+      try {
+        if (existing?.businessSnapshot) snap = JSON.parse(existing.businessSnapshot);
+      } catch {}
+      if (fontSizeConfig) snap.fontSizeConfig = fontSizeConfig;
+
       return tx.invoice.update({
         where: { id: params.id, userId: user.id },
         data: {
@@ -110,6 +121,7 @@ export async function PUT(
           balanceDue: totals.balanceDue,
           notes,
           paymentTerms,
+          businessSnapshot: JSON.stringify(snap),
           items: {
             create: processedItems,
           },

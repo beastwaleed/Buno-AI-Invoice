@@ -24,6 +24,7 @@ export interface InvoiceFontSizeConfig {
   body?: number;   // multiplier for addresses, dates, metadata
   table?: number;  // multiplier for items, quantities, prices
   total?: number;  // multiplier for subtotal, taxes, totals, notes
+  logo?: number;   // multiplier for business logo size: 1.0 = 100%
 }
 
 export interface BusinessProfileData {

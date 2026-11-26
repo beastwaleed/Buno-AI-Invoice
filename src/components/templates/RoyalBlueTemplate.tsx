@@ -36,12 +36,15 @@ export const RoyalBlueTemplate: React.FC<TemplateProps> = ({ invoice }) => {
           </h1>
           <div className="mt-3 flex items-center gap-2">
             {business.logoUrl ? (
-              <div className="bg-white/15 p-1 rounded-md flex items-center justify-center max-h-11 max-w-[120px]">
-                <img
-                  src={business.logoUrl}
-                  alt={business.businessName}
-                  className="max-h-8 max-w-full object-contain"
-                />
+              <div data-invoice-cat="logo" className="inline-block">
+                <div className="bg-white/15 p-1 rounded-md flex items-center justify-center max-h-16 max-w-[160px]">
+                  <img
+                    src={business.logoUrl}
+                    alt={business.businessName}
+                    data-invoice-logo="true"
+                    className="max-h-8 max-w-full object-contain"
+                  />
+                </div>
               </div>
             ) : null}
             <span className="font-bold text-sm tracking-wide">

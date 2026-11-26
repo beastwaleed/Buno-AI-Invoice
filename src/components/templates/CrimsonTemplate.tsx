@@ -27,12 +27,15 @@ export const CrimsonTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="bg-[#D91B24] p-8 md:p-10 flex justify-between items-center text-white">
           <div className="flex items-center gap-3">
             {business.logoUrl ? (
-              <div className="bg-white/15 p-1 rounded-lg flex items-center justify-center max-h-12 max-w-[120px]">
-                <img
-                  src={business.logoUrl}
-                  alt={business.businessName}
-                  className="max-h-9 max-w-full object-contain"
-                />
+              <div data-invoice-cat="logo" className="inline-block">
+                <div className="bg-white/15 p-1 rounded-lg flex items-center justify-center max-h-16 max-w-[160px]">
+                  <img
+                    src={business.logoUrl}
+                    alt={business.businessName}
+                    data-invoice-logo="true"
+                    className="max-h-9 max-w-full object-contain"
+                  />
+                </div>
               </div>
             ) : (
               <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center font-bold text-lg">

@@ -25,6 +25,7 @@ import {
   RotateCcw,
   Sliders,
   X,
+  MoveDiagonal2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { InvoiceData, InvoiceItemData, CustomerData, TemplateId } from "@/types/invoice";
@@ -37,7 +38,15 @@ import { ImageCropModal } from "@/components/common/ImageCropModal";
 import { CURRENCIES } from "@/lib/currencies";
 import { VoiceAssistantButton } from "@/components/invoice/VoiceAssistantButton";
 
+export type CategoryKey = "logo" | "header" | "body" | "table" | "total";
+
 export const FONT_CATEGORIES = [
+  {
+    key: "logo" as const,
+    label: "Business Logo",
+    sub: "Company logo size & visual prominence",
+    presets: [0.75, 1.0, 1.25, 1.5],
+  },
   {
     key: "header" as const,
     label: "Header & Title",
@@ -91,14 +100,30 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const [fontPanelOpen, setFontPanelOpen] = useState(false);
   const [fontModalOpen, setFontModalOpen] = useState(false);
 
+  // Active selected category for on-canvas visual drag resizing
+  const [activeVisualCat, setActiveVisualCat] = useState<CategoryKey | null>(null);
+  const [isDraggingHandle, setIsDraggingHandle] = useState(false);
+  const [selectedBox, setSelectedBox] = useState<{
+    top: number;
+    left: number;
+    width: number;
+    height: number;
+  } | null>(null);
+
   const handleUpdateFontSize = (
-    category: "header" | "body" | "table" | "total",
+    category: CategoryKey,
     delta: number
   ) => {
     setInvoice((prev) => {
-      const current = prev.fontSizeConfig || { header: 1.0, body: 1.0, table: 1.0, total: 1.0 };
+      const current = prev.fontSizeConfig || {
+        logo: 1.0,
+        header: 1.0,
+        body: 1.0,
+        table: 1.0,
+        total: 1.0,
+      };
       const currentVal = current[category] || 1.0;
-      const nextVal = Math.max(0.7, Math.min(1.8, Math.round((currentVal + delta) * 10) / 10));
+      const nextVal = Math.max(0.55, Math.min(2.1, Math.round((currentVal + delta) * 20) / 20));
       return {
         ...prev,
         fontSizeConfig: {
@@ -110,14 +135,20 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   };
 
   const handleSetCategoryScale = (
-    category: "header" | "body" | "table" | "total",
+    category: CategoryKey,
     scale: number
   ) => {
     setInvoice((prev) => ({
       ...prev,
       fontSizeConfig: {
-        ...(prev.fontSizeConfig || { header: 1.0, body: 1.0, table: 1.0, total: 1.0 }),
-        [category]: scale,
+        ...(prev.fontSizeConfig || {
+          logo: 1.0,
+          header: 1.0,
+          body: 1.0,
+          table: 1.0,
+          total: 1.0,
+        }),
+        [category]: Math.round(scale * 100) / 100,
       },
     }));
   };
@@ -125,9 +156,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const handleResetFontSizes = () => {
     setInvoice((prev) => ({
       ...prev,
-      fontSizeConfig: { header: 1.0, body: 1.0, table: 1.0, total: 1.0 },
+      fontSizeConfig: { logo: 1.0, header: 1.0, body: 1.0, table: 1.0, total: 1.0 },
     }));
-    toast.success("Font sizes reset to 100%");
+    toast.success("All sizes reset to 100%");
   };
 
   // Auto-calculate exact scale to fit mobile or desktop screen width without overflow
@@ -180,11 +211,12 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           initialInvoice.templateId === "modern" || initialInvoice.templateId === "elegant"
             ? "classic"
             : initialInvoice.templateId,
-        fontSizeConfig: initialInvoice.fontSizeConfig || {
-          header: 1.0,
-          body: 1.0,
-          table: 1.0,
-          total: 1.0,
+        fontSizeConfig: {
+          logo: initialInvoice.fontSizeConfig?.logo ?? 1.0,
+          header: initialInvoice.fontSizeConfig?.header ?? 1.0,
+          body: initialInvoice.fontSizeConfig?.body ?? 1.0,
+          table: initialInvoice.fontSizeConfig?.table ?? 1.0,
+          total: initialInvoice.fontSizeConfig?.total ?? 1.0,
         },
         business: {
           ...initialInvoice.business,
@@ -219,6 +251,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       invoiceNumber: `${prefix}${nextNum}`,
       templateId: (initialTemplate as TemplateId) || businessProfile?.defaultTemplate || "classic",
       fontSizeConfig: {
+        logo: 1.0,
         header: 1.0,
         body: 1.0,
         table: 1.0,
@@ -252,10 +285,110 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
 
   const isFontCustomized =
     Boolean(invoice.fontSizeConfig) &&
-    ((invoice.fontSizeConfig?.header ?? 1.0) !== 1.0 ||
+    ((invoice.fontSizeConfig?.logo ?? 1.0) !== 1.0 ||
+      (invoice.fontSizeConfig?.header ?? 1.0) !== 1.0 ||
       (invoice.fontSizeConfig?.body ?? 1.0) !== 1.0 ||
       (invoice.fontSizeConfig?.table ?? 1.0) !== 1.0 ||
       (invoice.fontSizeConfig?.total ?? 1.0) !== 1.0);
+
+  // Measure and position visual bounding box around selected category on canvas
+  const updateSelectedBox = React.useCallback(() => {
+    if (!activeVisualCat) {
+      setSelectedBox(null);
+      return;
+    }
+    const container = document.getElementById("invoice-preview-document");
+    if (!container) return;
+
+    const target = container.querySelector(
+      `[data-invoice-cat="${activeVisualCat}"]`
+    ) as HTMLElement | null;
+
+    if (!target) {
+      setSelectedBox(null);
+      return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+
+    const scale = Math.max(0.35, (zoomLevel || 100) / 100);
+    const padding = 4;
+    const top = Math.max(0, (targetRect.top - containerRect.top) / scale - padding);
+    const left = Math.max(0, (targetRect.left - containerRect.left) / scale - padding);
+    const width = targetRect.width / scale + padding * 2;
+    const height = targetRect.height / scale + padding * 2;
+
+    setSelectedBox({ top, left, width, height });
+  }, [activeVisualCat, zoomLevel, invoice.fontSizeConfig, invoice.templateId]);
+
+  useEffect(() => {
+    updateSelectedBox();
+    const timer = setTimeout(updateSelectedBox, 40);
+    window.addEventListener("resize", updateSelectedBox);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", updateSelectedBox);
+    };
+  }, [updateSelectedBox]);
+
+  const handleDragHandlePointerDown = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (!activeVisualCat) return;
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialScale =
+      invoice.fontSizeConfig?.[activeVisualCat] || 1.0;
+
+    setIsDraggingHandle(true);
+    const zoomFactor = Math.max(0.35, (zoomLevel || 100) / 100);
+
+    const onPointerMove = (moveEvt: PointerEvent) => {
+      const deltaX = moveEvt.clientX - startX;
+      const deltaY = moveEvt.clientY - startY;
+      const delta = (deltaX + deltaY) / (150 * zoomFactor);
+      const newScale = Math.max(
+        0.55,
+        Math.min(2.1, Math.round((initialScale + delta) * 20) / 20)
+      );
+
+      setInvoice((prev) => ({
+        ...prev,
+        fontSizeConfig: {
+          ...(prev.fontSizeConfig || {
+            logo: 1.0,
+            header: 1.0,
+            body: 1.0,
+            table: 1.0,
+            total: 1.0,
+          }),
+          [activeVisualCat]: newScale,
+        },
+      }));
+    };
+
+    const onPointerUp = () => {
+      setIsDraggingHandle(false);
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", onPointerUp);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", onPointerUp);
+  };
+
+  const handlePreviewDocumentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    const target = (e.target as HTMLElement).closest("[data-invoice-cat]") as HTMLElement | null;
+    if (target) {
+      const cat = target.getAttribute("data-invoice-cat") as CategoryKey | null;
+      if (cat) {
+        setActiveVisualCat(cat);
+        return;
+      }
+    }
+  };
 
   // Recompute deterministic totals on any item or tax/discount change
   const recalculate = (
@@ -1638,6 +1771,33 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
             </div>
           )}
 
+          {/* Visual Drag Instruction Banner */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50/70 border border-blue-200/70 rounded-xl px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs text-blue-950 shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <MoveDiagonal2 className="w-4 h-4 text-blue-600 shrink-0" />
+              <p className="truncate sm:whitespace-normal">
+                <strong>Visual Canvas:</strong> Tap the logo or text below to drag-resize directly.
+              </p>
+            </div>
+            {activeVisualCat ? (
+              <button
+                type="button"
+                onClick={() => setActiveVisualCat(null)}
+                className="text-[11px] font-bold text-blue-700 bg-white hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 shrink-0 transition-colors"
+              >
+                Done
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActiveVisualCat("logo")}
+                className="text-[11px] font-medium text-blue-700 hover:underline shrink-0"
+              >
+                Select Logo
+              </button>
+            )}
+          </div>
+
           {/* Sticky Document Wrapper */}
           <div className="lg:sticky lg:top-24 overflow-x-auto pb-12 w-full">
             <div
@@ -1656,16 +1816,156 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 className="shadow-invoice rounded-lg overflow-hidden border border-[#E8E8E5] bg-white origin-top-left"
               >
                 {/* Document Element targeted by PDF and PNG exporter */}
-                <div id="invoice-preview-document" className="w-[760px] bg-white">
+                <div
+                  id="invoice-preview-document"
+                  onClick={handlePreviewDocumentClick}
+                  className="w-[760px] bg-white relative select-none"
+                >
                   <InvoiceRenderer
                     invoice={invoice}
                     templateId={invoice.templateId}
                     fontSizeConfig={invoice.fontSizeConfig}
                   />
+
+                  {/* Visual Bounding Box & Interactive Corner Drag Handle */}
+                  {activeVisualCat && selectedBox && (
+                    <div
+                      style={{
+                        top: `${selectedBox.top}px`,
+                        left: `${selectedBox.left}px`,
+                        width: `${selectedBox.width}px`,
+                        height: `${selectedBox.height}px`,
+                      }}
+                      className="absolute border-2 border-blue-600 rounded-lg pointer-events-none z-30 transition-all duration-75 shadow-lg shadow-blue-500/20"
+                    >
+                      {/* Corner Dots */}
+                      <div className="absolute -top-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-blue-600 rounded-full" />
+                      <div className="absolute -top-1.5 -right-1.5 w-3 h-3 bg-white border-2 border-blue-600 rounded-full" />
+                      <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-white border-2 border-blue-600 rounded-full" />
+
+                      {/* Interactive Drag Handle on Corner */}
+                      <div
+                        onPointerDown={handleDragHandlePointerDown}
+                        className={`pointer-events-auto absolute -bottom-4 -right-4 h-8 w-8 rounded-full flex items-center justify-center shadow-lg cursor-nwse-resize touch-none select-none transition-transform ${
+                          isDraggingHandle
+                            ? "bg-blue-700 scale-125 text-white ring-4 ring-blue-300"
+                            : "bg-blue-600 hover:bg-blue-700 hover:scale-110 text-white"
+                        }`}
+                        title="Drag outward to increase size, inward to decrease size"
+                      >
+                        <MoveDiagonal2 className="w-4 h-4" />
+                      </div>
+
+                      {/* Floating Badge Indicator */}
+                      <div className="pointer-events-auto absolute -top-7 left-0 bg-blue-600 text-white text-[11px] font-bold px-2.5 py-0.5 rounded shadow-sm flex items-center gap-1.5">
+                        <span>
+                          {FONT_CATEGORIES.find((c) => c.key === activeVisualCat)?.label}
+                        </span>
+                        <span className="opacity-90 font-mono">
+                          {Math.round((invoice.fontSizeConfig?.[activeVisualCat] || 1.0) * 100)}%
+                        </span>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
           </div>
+
+          {/* Floating Mobile/Desktop Tactile Drag Bar for Active Selection */}
+          {activeVisualCat && (
+            <div className="sticky bottom-4 z-40 bg-white/95 backdrop-blur-md border-2 border-blue-600/30 shadow-elevated rounded-2xl p-3.5 space-y-2 max-w-lg mx-auto animate-in slide-in-from-bottom-4 duration-150">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <MoveDiagonal2 className="w-3.5 h-3.5" />
+                  </div>
+                  <span className="text-xs font-bold text-[#0F172A]">
+                    {FONT_CATEGORIES.find((c) => c.key === activeVisualCat)?.label}
+                  </span>
+                  <span className="font-mono text-xs font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200">
+                    {Math.round((invoice.fontSizeConfig?.[activeVisualCat] || 1.0) * 100)}%
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSetCategoryScale(activeVisualCat, 1.0)}
+                    className="text-[11px] font-medium text-slate-500 hover:text-slate-800 px-2 py-0.5 rounded hover:bg-slate-100 transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveVisualCat(null)}
+                    className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+                    title="Deselect"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Tactile Drag Scrubber Track */}
+              <div className="flex items-center gap-2.5 pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => handleUpdateFontSize(activeVisualCat, -0.05)}
+                  className="h-8 w-8 min-w-[32px] flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700"
+                  title="Decrease"
+                >
+                  −
+                </button>
+
+                <div className="flex-1 relative flex items-center">
+                  <input
+                    type="range"
+                    min="0.55"
+                    max="2.0"
+                    step="0.05"
+                    value={invoice.fontSizeConfig?.[activeVisualCat] || 1.0}
+                    onChange={(e) =>
+                      handleSetCategoryScale(activeVisualCat, parseFloat(e.target.value))
+                    }
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleUpdateFontSize(activeVisualCat, 0.05)}
+                  className="h-8 w-8 min-w-[32px] flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700"
+                  title="Increase"
+                >
+                  +
+                </button>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center justify-between gap-1 pt-1 border-t border-slate-100">
+                <span className="text-[10px] text-slate-400">
+                  💡 Drag corner on canvas or slide above
+                </span>
+                <div className="flex items-center gap-1">
+                  {[0.85, 1.0, 1.25, 1.5].map((scale) => (
+                    <button
+                      key={scale}
+                      type="button"
+                      onClick={() => handleSetCategoryScale(activeVisualCat, scale)}
+                      className={`px-1.5 py-0.5 text-[10px] font-mono rounded transition-colors ${
+                        (invoice.fontSizeConfig?.[activeVisualCat] || 1.0) === scale
+                          ? "bg-blue-600 text-white font-bold"
+                          : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                      }`}
+                    >
+                      {Math.round(scale * 100)}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

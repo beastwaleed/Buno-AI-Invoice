@@ -35,11 +35,14 @@ export const CompactTemplate: React.FC<TemplateProps> = ({ invoice }) => {
         <div data-invoice-cat="header" className="flex justify-between items-center pb-4 border-b border-neutral-300">
           <div className="flex items-center gap-3">
             {business.logoUrl ? (
-              <img
-                src={business.logoUrl}
-                alt={business.businessName}
-                className="h-8 w-auto object-contain"
-              />
+              <div data-invoice-cat="logo" className="inline-block">
+                <img
+                  src={business.logoUrl}
+                  alt={business.businessName}
+                  data-invoice-logo="true"
+                  className="h-8 w-auto object-contain"
+                />
+              </div>
             ) : null}
             <div>
               <span className="font-bold text-base text-neutral-900 block leading-tight">
