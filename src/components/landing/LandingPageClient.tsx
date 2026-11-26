@@ -282,7 +282,7 @@ export const LandingPageClient: React.FC = () => {
     VOICE_PROMPTS.find((p) => p.id === activeVoicePrompt) || VOICE_PROMPTS[0];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] text-[#0F172A] selection:bg-neutral-900 selection:text-white flex flex-col justify-between font-sans antialiased overflow-x-hidden">
+    <div className="min-h-screen bg-[#FAFAF8] text-[#0F172A] selection:bg-neutral-900 selection:text-white flex flex-col justify-between font-sans antialiased overflow-x-clip">
       {/* 1. Header Navigation */}
       <header className="sticky top-0 z-40 bg-[#FAFAF8]/90 backdrop-blur-md border-b border-[#E8E8E5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
@@ -634,13 +634,13 @@ export const LandingPageClient: React.FC = () => {
       </section>
 
       {/* 4. Complete 9 Typographic Templates Showcase Section */}
-      <section id="templates" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#E8E8E5] pb-8">
-          <div className="space-y-3 max-w-2xl">
+      <section id="templates" className="py-20 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-10 sm:space-y-12 w-full min-w-0 overflow-x-clip">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[#E8E8E5] pb-8 w-full min-w-0">
+          <div className="space-y-3 max-w-2xl min-w-0">
             <span className="text-xs font-mono font-semibold text-[#475569] uppercase tracking-wider">
               Typographic Systems
             </span>
-            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A]">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight text-[#0F172A] break-words">
               9 Bespoke Invoice Templates.
             </h2>
             <p className="text-sm text-[#64748B] leading-relaxed">
@@ -648,9 +648,9 @@ export const LandingPageClient: React.FC = () => {
             </p>
           </div>
 
-          {/* Category Tabs: Smooth horizontal swipe on mobile, clean flex on desktop */}
-          <div className="w-full md:w-auto overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
-            <div className="inline-flex items-center gap-1.5 p-1 bg-[#F1F3F5] rounded-xl border border-[#E2E8F0] min-w-max">
+          {/* Category Tabs: Clean 2x2 grid on mobile, sleek inline flex on desktop */}
+          <div className="w-full sm:w-auto min-w-0">
+            <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 p-1 bg-[#F1F3F5] rounded-xl border border-[#E2E8F0] w-full">
               {[
                 { id: "all", label: `All (${TEMPLATE_LIST.length})` },
                 { id: "minimal", label: "Minimalist & Swiss" },
@@ -660,7 +660,7 @@ export const LandingPageClient: React.FC = () => {
                 <button
                   key={tab.id}
                   onClick={() => setTemplateCategory(tab.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                  className={`px-3 py-2 sm:py-1.5 rounded-lg text-xs font-medium text-center whitespace-nowrap transition-all ${
                     templateCategory === tab.id
                       ? "bg-white text-[#0F172A] shadow-2xs font-semibold"
                       : "text-[#64748B] hover:text-[#0F172A]"
@@ -674,16 +674,16 @@ export const LandingPageClient: React.FC = () => {
         </div>
 
         {/* 11 Templates Grid with Live Scaled Miniatures */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full min-w-0">
           {filteredTemplates.map((tpl) => (
             <div
               key={tpl.slug}
-              className="bg-white rounded-2xl border border-[#E8E8E5] overflow-hidden shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all flex flex-col justify-between group"
+              className="bg-white rounded-2xl border border-[#E8E8E5] overflow-hidden shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all flex flex-col justify-between group w-full min-w-0"
             >
               <div>
                 {/* Scaled Miniature Viewport: Centered and responsive */}
-                <div className="relative h-64 bg-[#F8FAFC] border-b border-[#E8E8E5] overflow-hidden flex justify-center">
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[720px] pointer-events-none select-none origin-top transform scale-[0.41] md:scale-[0.41] shadow-2xs border border-[#E8E8E5]">
+                <div className="relative h-64 bg-[#F8FAFC] border-b border-[#E8E8E5] overflow-hidden flex justify-center w-full">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[720px] pointer-events-none select-none origin-top transform scale-[0.38] xs:scale-[0.41] md:scale-[0.41] shadow-2xs border border-[#E8E8E5]">
                     <InvoiceRenderer
                       invoice={createSampleInvoice("USD", tpl.slug)}
                       templateId={tpl.slug}
@@ -978,17 +978,21 @@ export const LandingPageClient: React.FC = () => {
       </section>
 
       {/* 7. Zero Paywall Proposition (No fake pricing cards) */}
-      <section className="py-16 sm:py-20 bg-white border-t border-[#E8E8E5]">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
+      <section className="py-16 sm:py-20 bg-white border-t border-[#E8E8E5] overflow-hidden w-full">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8 w-full min-w-0">
           <div className="space-y-3">
             <span className="text-xs font-mono font-semibold text-[#475569] uppercase tracking-wider">
               Transparency
             </span>
-            <h2 className="text-3xl sm:text-5xl font-bold tracking-tight text-[#0F172A]">
-              100% Free & Open Source. <br />
-              <span className="text-[#64748B]">Zero subscription paywalls.</span>
+            <h2 className="tracking-tight text-[#0F172A] leading-tight">
+              <span className="text-[19px] xs:text-[23px] sm:text-4xl md:text-5xl font-bold block whitespace-nowrap">
+                100% Free & Open Source.
+              </span>
+              <span className="text-[16px] xs:text-[20px] sm:text-3xl md:text-4xl font-normal text-[#64748B] block mt-1 sm:mt-2">
+                Zero subscription paywalls.
+              </span>
             </h2>
-            <p className="text-sm sm:text-base text-[#64748B] max-w-xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-base text-[#64748B] max-w-xl mx-auto leading-relaxed pt-1">
               Essential business tools should be fast, private, and accessible to every founder without $30/month fees or watermarks.
             </p>
           </div>
