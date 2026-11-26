@@ -113,11 +113,14 @@ export const InvoiceRenderer: React.FC<InvoiceRendererProps> = ({
 
   const colWidthRules = (tblConfig.columnWidths && tblConfig.columnWidths.length > 0)
     ? tblConfig.columnWidths.map((w, idx) => `
-      .invoice-render-wrapper table th:nth-child(${idx + 1}),
-      .invoice-render-wrapper table td:nth-child(${idx + 1}),
-      .invoice-render-wrapper table col:nth-child(${idx + 1}) {
+      .invoice-render-wrapper table col:nth-child(${idx + 1}),
+      .invoice-render-wrapper table thead th:nth-child(${idx + 1}),
+      .invoice-render-wrapper table tbody tr td:nth-child(${idx + 1}),
+      .invoice-render-wrapper table tr th:nth-child(${idx + 1}),
+      .invoice-render-wrapper table tr td:nth-child(${idx + 1}) {
         width: ${w}% !important;
         max-width: ${w}% !important;
+        min-width: 0 !important;
       }
     `).join("\n")
     : "";

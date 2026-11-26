@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus,
@@ -85,6 +85,15 @@ export const getFriendlyLabel = (key: string, snippet?: string): string => {
   return "Selected Text";
 };
 
+export const getTableColumns = (container: HTMLElement | null): HTMLElement[] => {
+  if (!container) return [];
+  const table = container.querySelector("table");
+  if (!table) return [];
+  const headerRow = table.querySelector("thead tr") || table.querySelector("tr:first-child");
+  if (!headerRow) return [];
+  return Array.from(headerRow.querySelectorAll(":scope > th, :scope > td")) as HTMLElement[];
+};
+
 export const FONT_CATEGORIES = [
   {
     key: "logo" as const,
@@ -161,6 +170,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   const [columnDividers, setColumnDividers] = useState<
     Array<{ index: number; left: number; top: number; height: number }>
   >([]);
+  const isDraggingDividerRef = useRef(false);
 
   const handleUpdateFontSize = (
     category: CategoryKey,
@@ -216,22 +226,26 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   // Auto-calculate exact scale to fit mobile or desktop screen width without overflow
   const handleFitScreen = () => {
     if (typeof window !== "undefined") {
+      const wrapper = document.getElementById("invoice-preview-wrapper");
+      const wrapperW = wrapper ? wrapper.clientWidth - 28 : 0;
       const screenW = window.innerWidth;
-      const availableW = screenW < 1024 ? screenW - 36 : 560;
-      const fit = Math.min(100, Math.max(38, Math.floor((availableW / 760) * 100)));
+      const availableW = wrapperW > 250 ? wrapperW : screenW < 1024 ? screenW - 36 : 500;
+      const fit = Math.min(100, Math.max(35, Math.floor((availableW / 760) * 100)));
       setZoomLevel(fit);
     }
   };
 
   useEffect(() => {
     handleFitScreen();
+    const timer = setTimeout(handleFitScreen, 100);
     const handleResize = () => {
-      if (window.innerWidth < 1024) {
-        handleFitScreen();
-      }
+      handleFitScreen();
     };
     window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener("resize", handleResize);
+    };
   }, []);
 
   // AI Modal States
@@ -441,12 +455,12 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
 
   const handleDistributeColumnsEvenly = () => {
     const container = document.getElementById("invoice-preview-document");
-    const ths = container?.querySelectorAll("table thead th, table tr:first-child th, table tr:first-child td");
-    const count = ths?.length || 5;
+    const ths = getTableColumns(container);
+    const count = ths.length || 5;
     const even = Math.round((100 / count) * 10) / 10;
     const widths = Array(count).fill(even);
-    const diff = Math.round((100 - even * count) * 10) / 10;
-    widths[widths.length - 1] = Math.round((widths[widths.length - 1] + diff) * 10) / 10;
+    const sum = widths.reduce((a, b) => a + b, 0);
+    widths[widths.length - 1] = Math.round((widths[widths.length - 1] + (100 - sum)) * 10) / 10;
 
     setInvoice((prev) => ({
       ...prev,
@@ -455,7 +469,37 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         columnWidths: widths,
       },
     }));
-    toast.success("Columns distributed evenly (Word-style)");
+    toast.success("Columns distributed evenly");
+  };
+
+  const handleNudgeColumnWidth = (colIndex: number, delta: number) => {
+    const container = document.getElementById("invoice-preview-document");
+    const ths = getTableColumns(container);
+    const count = ths.length || 4;
+    const currentWidths =
+      invoice.tableConfig?.columnWidths?.length === count
+        ? [...invoice.tableConfig.columnWidths]
+        : ths.map((th) => {
+            const tableW = th.closest("table")?.getBoundingClientRect().width || 1;
+            return Math.round((th.getBoundingClientRect().width / tableW) * 1000) / 10;
+          });
+
+    const otherIndex = colIndex < count - 1 ? colIndex + 1 : colIndex - 1;
+    const minW = 8;
+    const maxDelta = currentWidths[otherIndex] - minW;
+    const minDelta = -(currentWidths[colIndex] - minW);
+    const clampedDelta = Math.max(minDelta, Math.min(maxDelta, delta));
+
+    currentWidths[colIndex] = Math.round((currentWidths[colIndex] + clampedDelta) * 10) / 10;
+    currentWidths[otherIndex] = Math.round((currentWidths[otherIndex] - clampedDelta) * 10) / 10;
+
+    setInvoice((prev) => ({
+      ...prev,
+      tableConfig: {
+        ...(prev.tableConfig || {}),
+        columnWidths: currentWidths,
+      },
+    }));
   };
 
   const handleResetTableConfig = () => {
@@ -533,7 +577,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     const tableRect = table.getBoundingClientRect();
     const scale = Math.max(0.35, (zoomLevel || 100) / 100);
 
-    const ths = Array.from(table.querySelectorAll("thead th, tr:first-child th, tr:first-child td")) as HTMLElement[];
+    const ths = getTableColumns(container);
     if (ths.length < 2) {
       setColumnDividers([]);
       return;
@@ -554,21 +598,38 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       });
     }
     setColumnDividers(dividers);
-  }, [zoomLevel, invoice.tableConfig, invoice.items, invoice.templateId]);
+  }, [zoomLevel, invoice.tableConfig, invoice.items, invoice.templateId, activeTab]);
 
   useEffect(() => {
     updateColumnDividers();
-    const timer = setTimeout(updateColumnDividers, 50);
+    const t1 = setTimeout(updateColumnDividers, 50);
+    const t2 = setTimeout(updateColumnDividers, 200);
     window.addEventListener("resize", updateColumnDividers);
     return () => {
-      clearTimeout(timer);
+      clearTimeout(t1);
+      clearTimeout(t2);
       window.removeEventListener("resize", updateColumnDividers);
     };
-  }, [updateColumnDividers]);
+  }, [updateColumnDividers, activeTab, activeSelection]);
+
+  // Keep dividers attached via ResizeObserver
+  useEffect(() => {
+    const container = document.getElementById("invoice-preview-document");
+    const table = container?.querySelector("table");
+    if (!table) return;
+
+    const ro = new ResizeObserver(() => {
+      updateColumnDividers();
+    });
+    ro.observe(table);
+    return () => ro.disconnect();
+  }, [updateColumnDividers, activeTab]);
 
   const handleColumnDividerPointerDown = (e: React.PointerEvent, dividerIndex: number) => {
     e.stopPropagation();
     e.preventDefault();
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+
     const container = document.getElementById("invoice-preview-document");
     if (!container) return;
     const table = container.querySelector("table");
@@ -578,7 +639,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     const tableWidth = table.getBoundingClientRect().width / scale;
     const startX = e.clientX;
 
-    const ths = Array.from(table.querySelectorAll("thead th, tr:first-child th, tr:first-child td")) as HTMLElement[];
+    const ths = getTableColumns(container);
+    if (ths.length < 2) return;
+
     const currentWidths: number[] =
       invoice.tableConfig?.columnWidths?.length === ths.length
         ? [...invoice.tableConfig.columnWidths]
@@ -588,13 +651,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
     const initialRightColWidth = currentWidths[dividerIndex + 1];
 
     setIsDraggingDivider(true);
+    isDraggingDividerRef.current = true;
     setDraggingDividerIndex(dividerIndex);
     setActiveSelection({ type: "table", key: "table", label: "Invoice Table" });
 
     const onPointerMove = (moveEvt: PointerEvent) => {
       const deltaX = ((moveEvt.clientX - startX) / (scale * tableWidth)) * 100;
-      const maxDelta = initialRightColWidth - 6;
-      const minDelta = -(initialLeftColWidth - 6);
+      const minColWidth = 8;
+      const maxDelta = initialRightColWidth - minColWidth;
+      const minDelta = -(initialLeftColWidth - minColWidth);
       const clampedDelta = Math.max(minDelta, Math.min(maxDelta, deltaX));
 
       const nextWidths = [...currentWidths];
@@ -610,11 +675,15 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       }));
     };
 
-    const onPointerUp = () => {
+    const onPointerUp = (upEvt: PointerEvent) => {
       setIsDraggingDivider(false);
       setDraggingDividerIndex(null);
+      (e.target as HTMLElement).releasePointerCapture?.(upEvt.pointerId);
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      setTimeout(() => {
+        isDraggingDividerRef.current = false;
+      }, 150);
     };
 
     window.addEventListener("pointermove", onPointerMove);
@@ -657,7 +726,9 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
   };
 
   const handlePreviewDocumentClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (isDraggingDividerRef.current) return;
     const target = e.target as HTMLElement;
+    if (target.closest(".cursor-col-resize")) return;
 
     // 1. Logo
     const logoTarget = target.closest('[data-invoice-cat="logo"]');
@@ -666,7 +737,21 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
       return;
     }
 
-    // 2. Pre-tagged specific text element
+    // 2. Table, table header, or table container
+    const tableTarget = target.closest('table, [data-invoice-cat="table"]') as HTMLElement | null;
+    if (
+      tableTarget &&
+      (target.tagName === "TABLE" ||
+        target.tagName === "TH" ||
+        target.tagName === "THEAD" ||
+        target.closest("thead") ||
+        target.getAttribute("data-invoice-cat") === "table")
+    ) {
+      setActiveSelection({ type: "table", key: "table", label: "Invoice Table" });
+      return;
+    }
+
+    // 3. Pre-tagged specific text element
     const textTarget = target.closest("[data-invoice-text]") as HTMLElement | null;
     if (textTarget) {
       const key = textTarget.getAttribute("data-invoice-text")!;
@@ -675,18 +760,6 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
         key,
         label: getFriendlyLabel(key, textTarget.textContent || ""),
       });
-      return;
-    }
-
-    // 3. Table border, table th, or table container
-    const tableTarget = target.closest('table, [data-invoice-cat="table"]') as HTMLElement | null;
-    if (
-      tableTarget &&
-      (target.tagName === "TABLE" ||
-        target.tagName === "TH" ||
-        target.getAttribute("data-invoice-cat") === "table")
-    ) {
-      setActiveSelection({ type: "table", key: "table", label: "Invoice Table" });
       return;
     }
 
@@ -2122,7 +2195,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
 
           {/* Sticky Document Wrapper */}
-          <div className="lg:sticky lg:top-24 overflow-x-auto pb-12 w-full">
+          <div id="invoice-preview-wrapper" className="lg:sticky lg:top-24 overflow-x-auto pb-12 w-full">
             <div
               style={{
                 width: `${760 * (zoomLevel / 100)}px`,
@@ -2152,31 +2225,57 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                   />
 
                   {/* Draggable Column Boundary Dividers (MS Word Style) */}
-                  {columnDividers.map((div) => (
-                    <div
-                      key={div.index}
-                      style={{
-                        left: `${div.left - 6}px`,
-                        top: `${div.top}px`,
-                        height: `${div.height}px`,
-                        width: "12px",
-                      }}
-                      onPointerDown={(e) => handleColumnDividerPointerDown(e, div.index)}
-                      className="group absolute z-30 cursor-col-resize select-none touch-none flex items-stretch justify-center"
-                      title="Drag to resize column (MS Word style)"
-                    >
+                  {columnDividers.map((div) => {
+                    const isSelected = activeSelection?.type === "table";
+                    const isThisDragging = isDraggingDivider && draggingDividerIndex === div.index;
+                    return (
                       <div
-                        className={`w-[2px] h-full transition-all ${
-                          isDraggingDivider && draggingDividerIndex === div.index
-                            ? "bg-blue-600 w-[3px]"
-                            : "bg-blue-400/30 group-hover:bg-blue-600 group-hover:w-[3px]"
+                        key={div.index}
+                        style={{
+                          left: `${div.left - 14}px`,
+                          top: `${div.top}px`,
+                          height: `${div.height}px`,
+                          width: "28px",
+                        }}
+                        onPointerDown={(e) => handleColumnDividerPointerDown(e, div.index)}
+                        className={`group absolute z-30 cursor-col-resize select-none touch-none flex items-stretch justify-center transition-opacity duration-150 ${
+                          isSelected || isThisDragging ? "opacity-100" : "opacity-35 hover:opacity-100"
                         }`}
-                      />
-                      <div className="absolute -top-3 w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 shadow-sm transition-opacity">
-                        <span className="text-[9px] font-bold">⬌</span>
+                        title="Drag to resize column (MS Word style)"
+                      >
+                        {/* Vertical line indicator */}
+                        <div
+                          className={`w-[2px] h-full transition-all ${
+                            isThisDragging
+                              ? "bg-blue-600 w-[3px] shadow-sm shadow-blue-400"
+                              : isSelected
+                              ? "bg-blue-500 w-[2px] border-r border-blue-400/80"
+                              : "bg-blue-400/40 group-hover:bg-blue-600 group-hover:w-[3px]"
+                          }`}
+                        />
+
+                        {/* Top Grab Handle Pill */}
+                        <div
+                          className={`absolute -top-3.5 w-6 h-6 rounded-full flex items-center justify-center shadow-md transition-all ${
+                            isThisDragging
+                              ? "bg-blue-700 scale-125 text-white ring-2 ring-blue-300 opacity-100"
+                              : isSelected
+                              ? "bg-blue-600 text-white hover:bg-blue-700 hover:scale-110 opacity-100"
+                              : "bg-blue-600 text-white opacity-0 group-hover:opacity-100"
+                          }`}
+                        >
+                          <span className="text-[10px] font-bold leading-none select-none">⬌</span>
+                        </div>
+
+                        {/* Live Tooltip while dragging */}
+                        {isThisDragging && invoice.tableConfig?.columnWidths && (
+                          <div className="absolute -top-9 z-50 bg-[#0F172A] text-white text-[10px] font-mono font-bold px-2 py-0.5 rounded shadow-lg whitespace-nowrap pointer-events-none">
+                            {invoice.tableConfig.columnWidths[div.index]}% ⬌ {invoice.tableConfig.columnWidths[div.index + 1]}%
+                          </div>
+                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
 
                   {/* Visual Bounding Box & Interactive Corner Drag Handle */}
                   {activeSelection && selectedBox && (
@@ -2262,7 +2361,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
 
               {/* Table-Specific Word Controls */}
               {activeSelection.type === "table" && (
-                <div className="space-y-2 pt-1 border-t border-slate-100">
+                <div className="space-y-2.5 pt-1.5 border-t border-slate-100">
                   <div className="flex items-center justify-between gap-1 text-xs">
                     <span className="text-[11px] font-medium text-slate-600">Row Density:</span>
                     <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
@@ -2280,6 +2379,67 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                           {density === "compact" ? "Compact" : density === "relaxed" ? "Spacious" : "Normal"}
                         </button>
                       ))}
+                    </div>
+                  </div>
+
+                  {/* Column Widths Nudge & Steppers */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-[11px] text-slate-600">
+                      <span className="font-semibold text-slate-700">Column Widths:</span>
+                      <span className="text-[10px] text-blue-600 font-mono">
+                        💡 Drag ⬌ on table or nudge below
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {columnDividers.length > 0 &&
+                        (() => {
+                          const container = typeof document !== "undefined" ? document.getElementById("invoice-preview-document") : null;
+                          const ths = getTableColumns(container);
+                          const count = ths.length || columnDividers.length + 1;
+                          const widths =
+                            invoice.tableConfig?.columnWidths?.length === count
+                              ? invoice.tableConfig.columnWidths
+                              : ths.map((th) => {
+                                  const tableW = th.closest("table")?.getBoundingClientRect().width || 1;
+                                  return Math.round((th.getBoundingClientRect().width / tableW) * 100);
+                                });
+
+                          return widths.map((w, idx) => {
+                            const name = ths[idx]?.textContent?.trim().slice(0, 12) || `Col ${idx + 1}`;
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center gap-1 bg-slate-50 border border-slate-200 rounded-lg px-2 py-0.5 text-[11px]"
+                              >
+                                <span className="font-medium text-slate-700 truncate max-w-[70px]">
+                                  {name}:
+                                </span>
+                                <span className="font-mono text-blue-700 font-bold text-[10px]">
+                                  {Math.round(w)}%
+                                </span>
+                                <div className="flex items-center gap-0.5 ml-0.5">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNudgeColumnWidth(idx, -2)}
+                                    className="w-4 h-4 flex items-center justify-center rounded bg-white hover:bg-slate-200 border border-slate-200 text-[10px] font-bold text-slate-700 transition-colors"
+                                    title="Decrease column width by 2%"
+                                  >
+                                    -
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleNudgeColumnWidth(idx, 2)}
+                                    className="w-4 h-4 flex items-center justify-center rounded bg-white hover:bg-slate-200 border border-slate-200 text-[10px] font-bold text-slate-700 transition-colors"
+                                    title="Increase column width by 2%"
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
                     </div>
                   </div>
 
