@@ -29,6 +29,7 @@ import {
   Printer,
   ExternalLink,
   Code2,
+  Menu,
 } from "lucide-react";
 import { TEMPLATE_LIST, InvoiceRenderer } from "@/components/templates";
 import { InvoiceData, TemplateDefinition } from "@/types/invoice";
@@ -222,6 +223,9 @@ const VOICE_PROMPTS = [
 ];
 
 export const LandingPageClient: React.FC = () => {
+  // Mobile navigation drawer state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   // Hero interactive states
   const [heroCurrency, setHeroCurrency] = useState<SupportedCurrency>("USD");
   const [heroTemplate, setHeroTemplate] = useState<string>("classic");
@@ -234,11 +238,24 @@ export const LandingPageClient: React.FC = () => {
   // Voice AI prompt state
   const [activeVoicePrompt, setActiveVoicePrompt] = useState<string>("roman-urdu");
 
-  // Handle ESC key to close modal
+  // Adjust preview zoom and preserve currency when modal opens
+  useEffect(() => {
+    if (selectedPreviewTemplate) {
+      if (typeof window !== "undefined" && window.innerWidth < 640) {
+        const autoZoom = Math.max(38, Math.min(56, Math.floor(((window.innerWidth - 32) / 720) * 100)));
+        setPreviewZoom(autoZoom);
+      } else {
+        setPreviewZoom(100);
+      }
+    }
+  }, [selectedPreviewTemplate]);
+
+  // Handle ESC key to close modal or mobile menu
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setSelectedPreviewTemplate(null);
+        setMobileMenuOpen(false);
       }
     };
     window.addEventListener("keydown", handleKeyDown);
@@ -265,12 +282,12 @@ export const LandingPageClient: React.FC = () => {
     VOICE_PROMPTS.find((p) => p.id === activeVoicePrompt) || VOICE_PROMPTS[0];
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8] text-[#0F172A] selection:bg-neutral-900 selection:text-white flex flex-col justify-between font-sans antialiased">
+    <div className="min-h-screen bg-[#FAFAF8] text-[#0F172A] selection:bg-neutral-900 selection:text-white flex flex-col justify-between font-sans antialiased overflow-x-hidden">
       {/* 1. Header Navigation */}
-      <header className="sticky top-0 z-40 bg-[#FAFAF8]/85 backdrop-blur-md border-b border-[#E8E8E5]">
+      <header className="sticky top-0 z-40 bg-[#FAFAF8]/90 backdrop-blur-md border-b border-[#E8E8E5]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-2.5 focus:outline-none group">
+            <Link href="/" className="flex items-center gap-2 focus:outline-none group">
               <BunoLogo size="sm" />
               <span className="hidden sm:inline-block text-[10px] font-mono font-medium px-2 py-0.5 rounded-md bg-[#F1F3F5] text-[#475569] border border-[#E2E8F0]">
                 v2.4 Production
@@ -299,39 +316,109 @@ export const LandingPageClient: React.FC = () => {
             </a>
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/auth/login"
-              className="px-3.5 py-1.5 text-xs font-medium text-[#475569] hover:text-[#0F172A] transition-colors"
+              className="hidden sm:inline-flex px-3.5 py-1.5 text-xs font-medium text-[#475569] hover:text-[#0F172A] transition-colors"
             >
               Sign In
             </Link>
             <Link
               href="/invoices/new"
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-[#0F172A] hover:bg-black rounded-lg shadow-2xs transition-all active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-xs font-semibold text-white bg-[#0F172A] hover:bg-black rounded-lg shadow-2xs transition-all active:scale-[0.98] whitespace-nowrap"
             >
               <span>Create Invoice</span>
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-3 h-3 hidden xs:inline-block" />
             </Link>
+            {/* Mobile Hamburger Menu Toggle */}
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F3F5] rounded-lg transition-colors focus:outline-none"
+              aria-label="Toggle navigation menu"
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Navigation Dropdown Drawer */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-[#E8E8E5] bg-[#FAFAF8] px-4 py-3 space-y-3 shadow-lg animate-in slide-in-from-top-2 duration-150">
+            <div className="flex flex-col space-y-1 text-xs font-medium text-[#475569]">
+              <a
+                href="#templates"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-lg hover:bg-white hover:text-[#0F172A] transition-colors flex items-center justify-between"
+              >
+                <span>Bespoke Templates</span>
+                <span className="text-[10px] font-mono text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded border border-[#E2E8F0]">
+                  9 Systems
+                </span>
+              </a>
+              <a
+                href="#architecture"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-lg hover:bg-white hover:text-[#0F172A] transition-colors"
+              >
+                Production Integrity & Math
+              </a>
+              <a
+                href="#voice-ai"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-lg hover:bg-white hover:text-[#0F172A] transition-colors"
+              >
+                Multilingual Voice AI
+              </a>
+              <a
+                href="https://github.com/beastwaleed/Buno-AI-Invoice"
+                target="_blank"
+                rel="noreferrer"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-lg hover:bg-white hover:text-[#0F172A] transition-colors flex items-center gap-2"
+              >
+                <Code2 className="w-4 h-4" />
+                <span>GitHub Repository</span>
+                <ExternalLink className="w-3.5 h-3.5 text-[#94A3B8] ml-auto" />
+              </a>
+            </div>
+
+            <div className="pt-2.5 border-t border-[#E8E8E5] grid grid-cols-2 gap-2">
+              <Link
+                href="/auth/login"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-2 text-center text-xs font-medium text-[#475569] bg-white border border-[#E2E8F0] rounded-lg hover:bg-[#F8FAFC]"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/auth/register"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-2 text-center text-xs font-semibold text-white bg-[#0F172A] rounded-lg hover:bg-black shadow-2xs"
+              >
+                Register
+              </Link>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* 2. Hero Section */}
-      <section className="pt-16 pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-8">
+      <section className="pt-12 sm:pt-16 pb-16 sm:pb-20 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto text-center space-y-6 sm:space-y-8">
         {/* Subtle Status Pill */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E2E8F0] shadow-2xs text-xs font-mono text-[#334155]">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>Production Ready · 9 Typographic Systems · Open Source</span>
+        <div className="inline-flex items-center gap-2 px-3 sm:px-3.5 py-1 rounded-full bg-white border border-[#E2E8F0] shadow-2xs text-[11px] sm:text-xs font-mono text-[#334155] max-w-full">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+          <span className="sm:hidden truncate">Production Ready · 9 Systems · Open Source</span>
+          <span className="hidden sm:inline">Production Ready · 9 Typographic Systems · Open Source</span>
         </div>
 
         {/* Main Value Headline */}
-        <div className="space-y-4 max-w-4xl mx-auto">
-          <h1 className="text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#0F172A] leading-[1.08]">
+        <div className="space-y-3 sm:space-y-4 max-w-4xl mx-auto">
+          <h1 className="text-3xl xs:text-4xl sm:text-6xl lg:text-7xl font-bold tracking-tight text-[#0F172A] leading-[1.12] sm:leading-[1.08]">
             Invoicing engineered for <br className="hidden sm:inline" />
             <span className="text-[#334155]">precision & speed.</span>
           </h1>
-          <p className="text-base sm:text-lg text-[#64748B] max-w-2xl mx-auto leading-relaxed">
+          <p className="text-sm sm:text-lg text-[#64748B] max-w-2xl mx-auto leading-relaxed px-1">
             Deterministic multi-currency calculations, multilingual voice input, and 9 production typographic templates. Free, open source, and built with zero subscription paywalls.
           </p>
         </div>
@@ -354,19 +441,19 @@ export const LandingPageClient: React.FC = () => {
           </a>
         </div>
 
-        {/* Reassurance Metadata Strip */}
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-6 text-xs text-[#64748B]">
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> No credit card required
+        {/* Reassurance Metadata Strip: Clean 2x2 grid on mobile, flex on desktop */}
+        <div className="pt-2 grid grid-cols-2 sm:flex sm:flex-wrap items-center justify-center gap-2 sm:gap-6 text-[11px] sm:text-xs text-[#64748B] max-w-sm sm:max-w-none mx-auto">
+          <span className="flex items-center gap-1.5 bg-white/70 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-[#E2E8F0] sm:border-0 justify-center">
+            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> <span className="truncate">No credit card</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> Instant vector PDF & PNG export
+          <span className="flex items-center gap-1.5 bg-white/70 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-[#E2E8F0] sm:border-0 justify-center">
+            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> <span className="truncate">Instant export</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> Multi-currency (PKR, INR, USD, EUR, AED)
+          <span className="flex items-center gap-1.5 bg-white/70 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-[#E2E8F0] sm:border-0 justify-center">
+            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> <span className="truncate">Multi-currency</span>
           </span>
-          <span className="flex items-center gap-1.5">
-            <Check className="w-3.5 h-3.5 text-emerald-600" /> Zero watermarks
+          <span className="flex items-center gap-1.5 bg-white/70 sm:bg-transparent px-2.5 py-1.5 sm:p-0 rounded-lg sm:rounded-none border border-[#E2E8F0] sm:border-0 justify-center">
+            <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" /> <span className="truncate">Zero watermarks</span>
           </span>
         </div>
 
@@ -374,17 +461,19 @@ export const LandingPageClient: React.FC = () => {
         <div className="pt-8 max-w-6xl mx-auto text-left">
           <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_20px_50px_rgba(0,0,0,0.06)] overflow-hidden">
             {/* Window Titlebar */}
-            <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#EF4444]/80" />
-                <div className="w-3 h-3 rounded-full bg-[#F59E0B]/80" />
-                <div className="w-3 h-3 rounded-full bg-[#10B981]/80" />
-                <span className="ml-2 text-xs font-mono text-[#64748B]">
-                  buno-studio // INV-2026-081 · Elena Rostova
+            <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] px-3.5 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#EF4444]/80" />
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#F59E0B]/80" />
+                  <div className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-[#10B981]/80" />
+                </div>
+                <span className="text-[11px] sm:text-xs font-mono text-[#64748B] truncate">
+                  buno-studio // INV-2026-081
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded">
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-50 border border-emerald-200/80 px-2 py-0.5 rounded whitespace-nowrap">
                   Status: Ready
                 </span>
                 <span className="hidden sm:inline-block text-[11px] font-mono text-[#64748B] bg-[#F1F3F5] px-2 py-0.5 rounded">
@@ -394,10 +483,10 @@ export const LandingPageClient: React.FC = () => {
             </div>
 
             {/* Split Studio Workbench */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[520px]">
+            <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px] sm:min-h-[520px]">
               {/* Left Configuration Pane */}
-              <div className="lg:col-span-5 p-6 border-b lg:border-b-0 lg:border-r border-[#E2E8F0] flex flex-col justify-between space-y-6 bg-white">
-                <div className="space-y-5">
+              <div className="lg:col-span-5 p-4 sm:p-6 border-b lg:border-b-0 lg:border-r border-[#E2E8F0] flex flex-col justify-between space-y-5 sm:space-y-6 bg-white">
+                <div className="space-y-4 sm:space-y-5">
                   {/* Currency Switcher */}
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
@@ -454,13 +543,13 @@ export const LandingPageClient: React.FC = () => {
                   </div>
 
                   {/* Multilingual Voice Assistant Demo Widget */}
-                  <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="font-semibold text-[#0F172A] flex items-center gap-1.5">
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-2.5">
+                    <div className="flex items-center justify-between text-xs gap-1.5">
+                      <span className="font-semibold text-[#0F172A] flex items-center gap-1.5 shrink-0">
                         <Mic className="w-3.5 h-3.5 text-blue-600" />
                         <span>Voice AI Parser Active</span>
                       </span>
-                      <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      <span className="text-[10px] font-mono text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 whitespace-nowrap shrink-0">
                         Urdu · Hindi · Eng · Arab
                       </span>
                     </div>
@@ -474,7 +563,7 @@ export const LandingPageClient: React.FC = () => {
                   </div>
 
                   {/* Calculated Math Preview */}
-                  <div className="p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-xs">
+                  <div className="p-3 sm:p-3.5 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] space-y-1.5 text-xs">
                     <div className="flex justify-between text-[#64748B]">
                       <span>Subtotal:</span>
                       <span className="font-mono font-medium text-[#0F172A]">
@@ -511,11 +600,11 @@ export const LandingPageClient: React.FC = () => {
               </div>
 
               {/* Right Live Rendered Invoice Viewport */}
-              <div className="lg:col-span-7 bg-[#F1F3F5] p-4 sm:p-6 flex items-center justify-center overflow-hidden relative">
+              <div className="lg:col-span-7 bg-[#F1F3F5] p-3 sm:p-6 flex items-center justify-center overflow-hidden relative">
                 <div className="w-full max-w-[560px] bg-white rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden">
-                  <div className="relative h-[480px] overflow-hidden bg-white">
-                    {/* Live Scaled Miniature Viewport */}
-                    <div className="absolute top-0 left-0 w-[720px] pointer-events-none select-none origin-top-left transform scale-[0.62] sm:scale-[0.70] p-4">
+                  <div className="relative h-[360px] xs:h-[420px] sm:h-[480px] overflow-hidden bg-white flex justify-center">
+                    {/* Live Scaled Miniature Viewport: Centered and responsive */}
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[720px] pointer-events-none select-none origin-top transform scale-[0.41] xs:scale-[0.48] sm:scale-[0.68] lg:scale-[0.70] p-3 sm:p-4">
                       <InvoiceRenderer
                         invoice={heroInvoiceData}
                         templateId={heroTemplate}
@@ -525,13 +614,13 @@ export const LandingPageClient: React.FC = () => {
                     <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
                   </div>
 
-                  <div className="p-3 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
-                    <span className="font-mono text-[11px]">
+                  <div className="p-2.5 sm:p-3 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-xs text-[#64748B]">
+                    <span className="font-mono text-[10px] sm:text-[11px] truncate mr-2">
                       Active: {heroTemplate.toUpperCase()} · Currency: {heroCurrency}
                     </span>
                     <button
                       onClick={() => setSelectedPreviewTemplate(heroTemplate)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#0F172A] hover:underline"
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-[#0F172A] hover:underline shrink-0"
                     >
                       <Eye className="w-3.5 h-3.5" />
                       <span>Full View</span>
@@ -559,26 +648,28 @@ export const LandingPageClient: React.FC = () => {
             </p>
           </div>
 
-          {/* Category Tabs */}
-          <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#F1F3F5] rounded-xl border border-[#E2E8F0]">
-            {[
-              { id: "all", label: `All (${TEMPLATE_LIST.length})` },
-              { id: "minimal", label: "Minimalist & Swiss" },
-              { id: "creative", label: "Studio & Creative" },
-              { id: "corporate", label: "Corporate & Ledger" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setTemplateCategory(tab.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  templateCategory === tab.id
-                    ? "bg-white text-[#0F172A] shadow-2xs font-semibold"
-                    : "text-[#64748B] hover:text-[#0F172A]"
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Category Tabs: Smooth horizontal swipe on mobile, clean flex on desktop */}
+          <div className="w-full md:w-auto overflow-x-auto no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="inline-flex items-center gap-1.5 p-1 bg-[#F1F3F5] rounded-xl border border-[#E2E8F0] min-w-max">
+              {[
+                { id: "all", label: `All (${TEMPLATE_LIST.length})` },
+                { id: "minimal", label: "Minimalist & Swiss" },
+                { id: "creative", label: "Studio & Creative" },
+                { id: "corporate", label: "Corporate & Ledger" },
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setTemplateCategory(tab.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${
+                    templateCategory === tab.id
+                      ? "bg-white text-[#0F172A] shadow-2xs font-semibold"
+                      : "text-[#64748B] hover:text-[#0F172A]"
+                  }`}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -590,9 +681,9 @@ export const LandingPageClient: React.FC = () => {
               className="bg-white rounded-2xl border border-[#E8E8E5] overflow-hidden shadow-2xs hover:shadow-md hover:border-[#CBD5E1] transition-all flex flex-col justify-between group"
             >
               <div>
-                {/* Scaled Miniature Viewport */}
-                <div className="relative h-64 bg-[#F8FAFC] border-b border-[#E8E8E5] overflow-hidden">
-                  <div className="absolute top-0 left-0 w-[720px] pointer-events-none select-none origin-top-left transform scale-[0.38] md:scale-[0.41] shadow-2xs border border-[#E8E8E5]">
+                {/* Scaled Miniature Viewport: Centered and responsive */}
+                <div className="relative h-64 bg-[#F8FAFC] border-b border-[#E8E8E5] overflow-hidden flex justify-center">
+                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[720px] pointer-events-none select-none origin-top transform scale-[0.41] md:scale-[0.41] shadow-2xs border border-[#E8E8E5]">
                     <InvoiceRenderer
                       invoice={createSampleInvoice("USD", tpl.slug)}
                       templateId={tpl.slug}
@@ -764,12 +855,12 @@ export const LandingPageClient: React.FC = () => {
       </section>
 
       {/* 6. Interactive Voice AI Demonstration (Transparent, Real Capabilities) */}
-      <section id="voice-ai" className="py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-12">
-        <div className="max-w-3xl space-y-3">
+      <section id="voice-ai" className="py-16 sm:py-24 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto space-y-8 sm:space-y-12 w-full min-w-0 overflow-hidden">
+        <div className="max-w-3xl space-y-3 min-w-0">
           <span className="text-xs font-mono font-semibold text-[#475569] uppercase tracking-wider">
             Conversational Intelligence
           </span>
-          <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A]">
+          <h2 className="text-2xl xs:text-3xl sm:text-4xl font-bold tracking-tight text-[#0F172A]">
             Speak in any language. Buno itemizes it.
           </h2>
           <p className="text-sm text-[#64748B] leading-relaxed">
@@ -778,27 +869,29 @@ export const LandingPageClient: React.FC = () => {
         </div>
 
         {/* Interactive Voice Playground Card */}
-        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden">
-          {/* Tab Selector */}
-          <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] p-3 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-medium text-[#64748B] mr-2">Try Real Voice Prompts:</span>
-              {VOICE_PROMPTS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setActiveVoicePrompt(p.id)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    activeVoicePrompt === p.id
-                      ? "bg-white text-[#0F172A] shadow-2xs font-semibold border border-[#E2E8F0]"
-                      : "text-[#64748B] hover:text-[#0F172A]"
-                  }`}
-                >
-                  <span>{p.flag}</span>
-                  <span>{p.label}</span>
-                </button>
-              ))}
+        <div className="bg-white rounded-2xl border border-[#E2E8F0] shadow-sm overflow-hidden w-full min-w-0">
+          {/* Tab Selector: 2x2 grid on mobile, flex row on sm+ */}
+          <div className="bg-[#F8FAFC] border-b border-[#E2E8F0] p-2.5 sm:p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 min-w-0 w-full overflow-hidden">
+            <div className="w-full sm:w-auto min-w-0 flex-1">
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-1.5 py-0.5">
+                <span className="text-xs font-medium text-[#64748B] mr-1 whitespace-nowrap hidden sm:inline">Try Real Voice Prompts:</span>
+                {VOICE_PROMPTS.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => setActiveVoicePrompt(p.id)}
+                    className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 whitespace-nowrap ${
+                      activeVoicePrompt === p.id
+                        ? "bg-white text-[#0F172A] shadow-2xs font-semibold border border-[#E2E8F0]"
+                        : "text-[#64748B] hover:text-[#0F172A] bg-[#F1F3F5] sm:bg-transparent"
+                    }`}
+                  >
+                    <span>{p.flag}</span>
+                    <span>{p.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
-            <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            <span className="text-[10px] sm:text-[11px] font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 self-start sm:self-auto shrink-0 whitespace-nowrap">
               Web Speech API + Gemini 1.5
             </span>
           </div>
@@ -806,7 +899,7 @@ export const LandingPageClient: React.FC = () => {
           {/* Split Prompt & Structured Output View */}
           <div className="grid grid-cols-1 lg:grid-cols-2 divide-y lg:divide-y-0 lg:divide-x divide-[#E2E8F0]">
             {/* Left: Input Speech Transcription */}
-            <div className="p-6 space-y-4">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between text-xs text-[#64748B]">
                 <span className="font-semibold text-[#0F172A] flex items-center gap-1.5">
                   <Mic className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
@@ -815,18 +908,18 @@ export const LandingPageClient: React.FC = () => {
                 <span className="font-mono text-[11px]">Audio Recognized</span>
               </div>
 
-              <div className="p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-sm text-[#0F172A] leading-relaxed font-mono">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-[#F8FAFC] border border-[#E2E8F0] text-xs sm:text-sm text-[#0F172A] leading-relaxed font-mono">
                 &quot;{activePromptData.transcript}&quot;
               </div>
 
               <div className="flex items-center gap-2 text-xs text-[#64748B]">
-                <span className="w-2 h-2 rounded-full bg-blue-600" />
+                <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
                 <span>Zero complex manual data entry required.</span>
               </div>
             </div>
 
             {/* Right: Deterministic Structured JSON Extraction */}
-            <div className="p-6 space-y-4 bg-[#FAFAF8]">
+            <div className="p-4 sm:p-6 space-y-3 sm:space-y-4 bg-[#FAFAF8]">
               <div className="flex items-center justify-between text-xs text-[#64748B]">
                 <span className="font-semibold text-[#0F172A] flex items-center gap-1.5">
                   <Terminal className="w-3.5 h-3.5 text-emerald-600" />
@@ -837,7 +930,7 @@ export const LandingPageClient: React.FC = () => {
                 </span>
               </div>
 
-              <div className="p-4 rounded-xl bg-white border border-[#E2E8F0] space-y-2 text-xs font-mono">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-white border border-[#E2E8F0] space-y-2 text-xs font-mono">
                 <div className="flex justify-between">
                   <span className="text-[#64748B]">clientName:</span>
                   <span className="font-bold text-[#0F172A]">
@@ -885,7 +978,7 @@ export const LandingPageClient: React.FC = () => {
       </section>
 
       {/* 7. Zero Paywall Proposition (No fake pricing cards) */}
-      <section className="py-20 bg-white border-t border-[#E8E8E5]">
+      <section className="py-16 sm:py-20 bg-white border-t border-[#E8E8E5]">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
           <div className="space-y-3">
             <span className="text-xs font-mono font-semibold text-[#475569] uppercase tracking-wider">
@@ -895,8 +988,8 @@ export const LandingPageClient: React.FC = () => {
               100% Free & Open Source. <br />
               <span className="text-[#64748B]">Zero subscription paywalls.</span>
             </h2>
-            <p className="text-base text-[#64748B] max-w-xl mx-auto leading-relaxed">
-              Essential business tools should be fast, private, and accessible to every founder without \$30/month fees or watermarks.
+            <p className="text-sm sm:text-base text-[#64748B] max-w-xl mx-auto leading-relaxed">
+              Essential business tools should be fast, private, and accessible to every founder without $30/month fees or watermarks.
             </p>
           </div>
 
@@ -1044,34 +1137,36 @@ export const LandingPageClient: React.FC = () => {
         <div
           role="dialog"
           aria-modal="true"
-          className="fixed inset-0 z-50 bg-[#0F172A]/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6"
+          className="fixed inset-0 z-50 bg-[#0F172A]/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-6"
         >
-          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[92vh] flex flex-col overflow-hidden border border-[#E2E8F0] animate-in fade-in-50 duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[94vh] flex flex-col overflow-hidden border border-[#E2E8F0] animate-in fade-in-50 duration-200">
             {/* Modal Header */}
-            <div className="p-4 border-b border-[#E8E8E5] flex items-center justify-between bg-[#F8FAFC]">
-              <div className="flex items-center gap-3">
-                <span className="font-semibold text-sm text-[#0F172A]">
+            <div className="p-3 sm:p-4 border-b border-[#E8E8E5] flex items-center justify-between bg-[#F8FAFC] gap-2">
+              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                <span className="font-semibold text-xs sm:text-sm text-[#0F172A] truncate">
                   {TEMPLATE_LIST.find((t) => t.slug === selectedPreviewTemplate)?.name ||
                     selectedPreviewTemplate}
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white border border-[#E2E8F0] text-[#64748B]">
+                <span className="text-[10px] font-mono px-1.5 sm:px-2 py-0.5 rounded bg-white border border-[#E2E8F0] text-[#64748B] uppercase shrink-0">
                   {TEMPLATE_LIST.find((t) => t.slug === selectedPreviewTemplate)?.fontStyle}
                 </span>
               </div>
 
-              <div className="flex items-center gap-3">
-                {/* Zoom Controls */}
-                <div className="hidden sm:flex items-center gap-1 bg-white border border-[#E2E8F0] rounded-lg p-0.5 text-xs">
+              <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+                {/* Zoom Controls: visible on mobile and desktop */}
+                <div className="flex items-center gap-0.5 bg-white border border-[#E2E8F0] rounded-lg p-0.5 text-xs">
                   <button
-                    onClick={() => setPreviewZoom(Math.max(60, previewZoom - 15))}
-                    className="px-2 py-0.5 hover:bg-[#F1F3F5] rounded text-[#64748B]"
+                    onClick={() => setPreviewZoom(Math.max(35, previewZoom - 10))}
+                    className="px-1.5 py-0.5 hover:bg-[#F1F3F5] rounded text-[#64748B] text-xs font-bold"
+                    title="Zoom Out"
                   >
                     -
                   </button>
-                  <span className="px-1 text-[11px] font-mono">{previewZoom}%</span>
+                  <span className="px-1 text-[10px] sm:text-[11px] font-mono min-w-[32px] text-center">{previewZoom}%</span>
                   <button
-                    onClick={() => setPreviewZoom(Math.min(130, previewZoom + 15))}
-                    className="px-2 py-0.5 hover:bg-[#F1F3F5] rounded text-[#64748B]"
+                    onClick={() => setPreviewZoom(Math.min(130, previewZoom + 10))}
+                    className="px-1.5 py-0.5 hover:bg-[#F1F3F5] rounded text-[#64748B] text-xs font-bold"
+                    title="Zoom In"
                   >
                     +
                   </button>
@@ -1079,7 +1174,7 @@ export const LandingPageClient: React.FC = () => {
 
                 <Link
                   href={`/invoices/new?template=${selectedPreviewTemplate}`}
-                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#0F172A] text-white hover:bg-black transition-colors"
+                  className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-[#0F172A] text-white hover:bg-black transition-colors whitespace-nowrap"
                 >
                   Use Layout
                 </Link>
@@ -1094,17 +1189,17 @@ export const LandingPageClient: React.FC = () => {
               </div>
             </div>
 
-            {/* Modal Body: High Fidelity Scaled Invoice */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-8 bg-[#F1F3F5] flex justify-center">
+            {/* Modal Body: High Fidelity Scaled Invoice with guaranteed column containment */}
+            <div className="flex-1 overflow-auto p-2 sm:p-8 bg-[#F1F3F5] flex justify-center items-start">
               <div
-                className="bg-white rounded-xl shadow-lg border border-[#E2E8F0] overflow-hidden transition-transform duration-150 origin-top"
+                className="bg-white rounded-xl shadow-lg border border-[#E2E8F0] overflow-hidden transition-transform duration-150 origin-top shrink-0"
                 style={{
                   width: "720px",
                   transform: `scale(${previewZoom / 100})`,
                 }}
               >
                 <InvoiceRenderer
-                  invoice={createSampleInvoice("USD", selectedPreviewTemplate)}
+                  invoice={createSampleInvoice(heroCurrency, selectedPreviewTemplate)}
                   templateId={selectedPreviewTemplate}
                   accentColor={
                     TEMPLATE_LIST.find((t) => t.slug === selectedPreviewTemplate)?.accentColor

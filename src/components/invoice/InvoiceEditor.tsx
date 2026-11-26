@@ -1299,8 +1299,8 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center gap-2 pt-2 md:pt-0 border-t border-[#F5F5F3] md:border-0 shrink-0 w-full md:w-auto">
-                <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors">
+              <div className="flex items-center gap-2 pt-2 md:pt-0 border-t border-[#F5F5F3] md:border-0 shrink-0 w-full md:w-auto">
+                <label className="flex-1 md:flex-initial cursor-pointer inline-flex items-center justify-center gap-1.5 px-3 py-1.5 bg-[#FAFAF8] hover:bg-[#F0F0EE] text-[#202124] rounded-lg text-xs font-medium border border-[#E8E8E5] transition-colors whitespace-nowrap">
                   <Upload className="w-3.5 h-3.5 text-[#4468E8]" />
                   <span>{invoice.business?.logoUrl ? "Change Logo" : "Upload Logo"}</span>
                   <input
@@ -1316,7 +1316,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     <button
                       type="button"
                       onClick={handleEditorReCrop}
-                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#4468E8] rounded-lg text-xs font-medium border border-blue-100 transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#4468E8] rounded-lg text-xs font-medium border border-blue-100 transition-colors shrink-0"
                       title="Crop and frame logo"
                     >
                       <CropIcon className="w-3.5 h-3.5" />
@@ -1325,7 +1325,7 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
                     <button
                       type="button"
                       onClick={handleEditorRemoveLogo}
-                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-xs font-medium transition-colors"
+                      className="inline-flex items-center justify-center gap-1 px-2.5 py-1.5 text-red-600 bg-red-50 hover:bg-red-100 border border-red-100 rounded-lg text-xs font-medium transition-colors shrink-0"
                       title="Remove Logo"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
