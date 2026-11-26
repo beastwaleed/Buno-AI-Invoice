@@ -9,12 +9,14 @@ interface ExportMenuProps {
   invoice: InvoiceData;
   elementId?: string;
   className?: string;
+  buttonClassName?: string;
 }
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({
   invoice,
   elementId = "invoice-preview-document",
   className = "",
+  buttonClassName,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -42,11 +44,14 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
         aria-label="Export invoice options"
         aria-haspopup="true"
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+        className={
+          buttonClassName ||
+          "w-full inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-[#4468E8]/20"
+        }
       >
-        <Download className="w-4 h-4" />
-        <span>Export</span>
-        <ChevronDown className="w-3.5 h-3.5 opacity-80" />
+        <Download className="w-3.5 h-3.5 shrink-0" />
+        <span className="truncate">Export</span>
+        <ChevronDown className="w-3 h-3 opacity-80 shrink-0" />
       </button>
 
       {isOpen && (
