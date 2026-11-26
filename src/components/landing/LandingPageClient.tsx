@@ -30,6 +30,10 @@ import {
   ExternalLink,
   Code2,
   Menu,
+  FileStack,
+  Unlock,
+  PenLine,
+  Image as ImageIcon,
 } from "lucide-react";
 import { TEMPLATE_LIST, InvoiceRenderer } from "@/components/templates";
 import { InvoiceData, TemplateDefinition } from "@/types/invoice";
@@ -299,6 +303,12 @@ export const LandingPageClient: React.FC = () => {
             <a href="#templates" className="hover:text-[#0F172A] transition-colors">
               Templates (9)
             </a>
+            <a href="#pdf-tools" className="hover:text-[#0F172A] transition-colors flex items-center gap-1">
+              <span>PDF Tools</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-purple-100 text-purple-700 font-bold">
+                New
+              </span>
+            </a>
             <a href="#architecture" className="hover:text-[#0F172A] transition-colors">
               Architecture
             </a>
@@ -356,6 +366,16 @@ export const LandingPageClient: React.FC = () => {
                   9 Systems
                 </span>
               </a>
+              <Link
+                href="/tools"
+                onClick={() => setMobileMenuOpen(false)}
+                className="px-3 py-2.5 rounded-lg hover:bg-white hover:text-[#0F172A] transition-colors flex items-center justify-between bg-purple-50/50 text-purple-900"
+              >
+                <span className="font-semibold">Free PDF Tools Suite</span>
+                <span className="text-[10px] font-mono font-bold text-purple-700 bg-purple-100 px-2 py-0.5 rounded border border-purple-200">
+                  4 Tools
+                </span>
+              </Link>
               <a
                 href="#architecture"
                 onClick={() => setMobileMenuOpen(false)}
@@ -977,7 +997,133 @@ export const LandingPageClient: React.FC = () => {
         </div>
       </section>
 
-      {/* 7. Zero Paywall Proposition (No fake pricing cards) */}
+      {/* 7. Free PDF Utilities Suite (Public - No Account Needed) */}
+      <section id="pdf-tools" className="py-20 sm:py-24 bg-[#FAFAF8] border-t border-[#E8E8E5]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] font-semibold">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>100% Client-Side • No Account Required</span>
+            </div>
+            <h2 className="font-serif font-bold text-2xl sm:text-4xl text-[#0F172A] tracking-tight">
+              Powerful PDF Tools for Everyday Work.
+            </h2>
+            <p className="text-xs sm:text-sm text-[#64748B] leading-relaxed">
+              Merge, unlock, edit, and convert PDF documents directly in your browser. Blazing fast, completely private, and zero subscription paywalls.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {/* 1. Merge PDFs */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E5] p-5 sm:p-6 shadow-subtle hover:shadow-elevated hover:border-blue-400/50 transition-all flex flex-col justify-between group space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <FileStack className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-[#0F172A] group-hover:text-blue-600 transition-colors">
+                    Merge PDFs
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Combine multiple PDF files into one clean document with custom page ordering.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/tools/merge-pdf"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAFAF8] hover:bg-blue-600 hover:text-white text-[#0F172A] text-xs font-semibold rounded-xl border border-[#E8E8E5] hover:border-blue-600 transition-all shadow-2xs"
+              >
+                <span>Merge PDFs</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* 2. PDF Password Remover */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E5] p-5 sm:p-6 shadow-subtle hover:shadow-elevated hover:border-orange-400/50 transition-all flex flex-col justify-between group space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                  <Unlock className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-[#0F172A] group-hover:text-orange-600 transition-colors">
+                    Password Remover
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Strip open passwords and permissions restrictions (print, copy, edit) permanently.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/tools/pdf-password-remover"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAFAF8] hover:bg-orange-600 hover:text-white text-[#0F172A] text-xs font-semibold rounded-xl border border-[#E8E8E5] hover:border-orange-600 transition-all shadow-2xs"
+              >
+                <span>Unlock PDF</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* 3. PDF Editor */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E5] p-5 sm:p-6 shadow-subtle hover:shadow-elevated hover:border-emerald-400/50 transition-all flex flex-col justify-between group space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <PenLine className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-[#0F172A] group-hover:text-emerald-600 transition-colors">
+                    PDF Editor
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Annotate, add text, draw freehand highlights, stamp your signature, and rotate pages.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/tools/pdf-editor"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAFAF8] hover:bg-emerald-600 hover:text-white text-[#0F172A] text-xs font-semibold rounded-xl border border-[#E8E8E5] hover:border-emerald-600 transition-all shadow-2xs"
+              >
+                <span>Edit PDF Online</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+
+            {/* 4. Image to PDF */}
+            <div className="bg-white rounded-2xl border border-[#E8E8E5] p-5 sm:p-6 shadow-subtle hover:shadow-elevated hover:border-purple-400/50 transition-all flex flex-col justify-between group space-y-4">
+              <div className="space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <ImageIcon className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-base text-[#0F172A] group-hover:text-purple-600 transition-colors">
+                    Image to PDF
+                  </h3>
+                  <p className="text-xs text-[#64748B] mt-1 leading-relaxed">
+                    Convert JPG, PNG, and WebP images into a clean PDF with custom page orientation.
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/tools/image-to-pdf"
+                className="w-full inline-flex items-center justify-center gap-1.5 py-2.5 px-3 bg-[#FAFAF8] hover:bg-purple-600 hover:text-white text-[#0F172A] text-xs font-semibold rounded-xl border border-[#E8E8E5] hover:border-purple-600 transition-all shadow-2xs"
+              >
+                <span>Convert Images</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          <div className="text-center pt-2">
+            <Link
+              href="/tools"
+              className="inline-flex items-center gap-2 text-xs font-semibold text-[#4468E8] hover:text-[#3455D1] transition-colors hover:underline"
+            >
+              <span>Explore all tools in the PDF Utilities Suite</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* 8. Zero Paywall Proposition (No fake pricing cards) */}
       <section className="py-16 sm:py-20 bg-white border-t border-[#E8E8E5] overflow-hidden w-full">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 sm:space-y-8 w-full min-w-0">
           <div className="space-y-3">
@@ -1075,6 +1221,39 @@ export const LandingPageClient: React.FC = () => {
               <li>
                 <Link href="/business" className="hover:text-[#0F172A] transition-colors">
                   Business Branding & Logo Cropper
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-2.5">
+            <h4 className="font-semibold text-[#0F172A] text-xs uppercase tracking-wider">
+              Free PDF Tools
+            </h4>
+            <ul className="space-y-1.5">
+              <li>
+                <Link href="/tools/merge-pdf" className="hover:text-[#0F172A] transition-colors">
+                  Merge PDFs
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/pdf-password-remover" className="hover:text-[#0F172A] transition-colors">
+                  PDF Password Remover
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/pdf-editor" className="hover:text-[#0F172A] transition-colors">
+                  PDF Editor
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/image-to-pdf" className="hover:text-[#0F172A] transition-colors">
+                  Image to PDF
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools" className="text-[#4468E8] font-semibold hover:underline">
+                  All PDF Tools →
                 </Link>
               </li>
             </ul>

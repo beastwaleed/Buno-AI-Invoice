@@ -14,6 +14,10 @@ import {
   TrendingUp,
   FileText,
   Users,
+  FileStack,
+  Unlock,
+  FileEdit,
+  Image as ImageIcon,
 } from "lucide-react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { getCurrencySymbol, getCurrencyDetails } from "@/lib/currencies";
@@ -336,6 +340,59 @@ export default async function DashboardPage() {
                     Browse 6 Invoice Styles
                   </span>
                   <ArrowRight className="w-3.5 h-3.5" />
+                </Link>
+              </div>
+            </div>
+
+            {/* Free PDF Tools Quick Launch */}
+            <div className="bg-white p-5 rounded-2xl border border-[#E8E8E5] shadow-subtle space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="font-serif font-bold text-sm text-[#202124]">
+                  Free PDF Tools
+                </h3>
+                <Link
+                  href="/tools"
+                  className="text-[11px] font-semibold text-[#4468E8] hover:underline"
+                >
+                  View All
+                </Link>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <Link
+                  href="/tools/merge-pdf"
+                  className="p-2.5 rounded-xl bg-[#FAFAF8] hover:bg-blue-50/50 hover:border-blue-200 border border-[#E8E8E5] transition-all space-y-1 group"
+                >
+                  <FileStack className="w-4 h-4 text-blue-600 group-hover:scale-105 transition-transform" />
+                  <p className="font-semibold text-[#202124] text-[11px] truncate">Merge PDFs</p>
+                  <p className="text-[10px] text-[#70757A] truncate">Combine files</p>
+                </Link>
+
+                <Link
+                  href="/tools/pdf-password-remover"
+                  className="p-2.5 rounded-xl bg-[#FAFAF8] hover:bg-orange-50/50 hover:border-orange-200 border border-[#E8E8E5] transition-all space-y-1 group"
+                >
+                  <Unlock className="w-4 h-4 text-orange-600 group-hover:scale-105 transition-transform" />
+                  <p className="font-semibold text-[#202124] text-[11px] truncate">Unlock PDF</p>
+                  <p className="text-[10px] text-[#70757A] truncate">Strip password</p>
+                </Link>
+
+                <Link
+                  href="/tools/pdf-editor"
+                  className="p-2.5 rounded-xl bg-[#FAFAF8] hover:bg-emerald-50/50 hover:border-emerald-200 border border-[#E8E8E5] transition-all space-y-1 group"
+                >
+                  <FileEdit className="w-4 h-4 text-emerald-600 group-hover:scale-105 transition-transform" />
+                  <p className="font-semibold text-[#202124] text-[11px] truncate">PDF Editor</p>
+                  <p className="text-[10px] text-[#70757A] truncate">Annotate & sign</p>
+                </Link>
+
+                <Link
+                  href="/tools/image-to-pdf"
+                  className="p-2.5 rounded-xl bg-[#FAFAF8] hover:bg-purple-50/50 hover:border-purple-200 border border-[#E8E8E5] transition-all space-y-1 group"
+                >
+                  <ImageIcon className="w-4 h-4 text-purple-600 group-hover:scale-105 transition-transform" />
+                  <p className="font-semibold text-[#202124] text-[11px] truncate">Image to PDF</p>
+                  <p className="text-[10px] text-[#70757A] truncate">Convert photos</p>
                 </Link>
               </div>
             </div>
