@@ -745,50 +745,54 @@ export const InvoiceEditor: React.FC<InvoiceEditorProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons: 4-column grid on mobile, inline-flex on sm+ screens */}
-        <div className="grid grid-cols-4 sm:flex items-center gap-2 sm:gap-2.5 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
-          <button
-            type="button"
-            onClick={() => setAiModalOpen(true)}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
-          >
-            <Sparkles className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">AI Studio</span>
-          </button>
+        {/* Action Buttons: 2 rows on mobile (Row 1: AI Studio & Fonts, Row 2: Export & Save), inline-flex on sm+ screens */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 pt-2 border-t border-[#F0F0EE] sm:border-0 sm:pt-0 sm:justify-end">
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => setAiModalOpen(true)}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-[#4468E8] bg-[#EEF2FF] hover:bg-blue-100 rounded-lg transition-colors border border-blue-200"
+            >
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
+              <span>AI Studio</span>
+            </button>
 
-          <button
-            type="button"
-            onClick={() => setFontModalOpen(true)}
-            className={`w-full sm:w-auto inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium rounded-lg transition-colors border ${
-              isFontCustomized
-                ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
-                : "bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-[#F1F5F9]"
-            }`}
-            title="Adjust font size for each text category on the invoice"
-          >
-            <Type className="w-3.5 h-3.5 shrink-0 text-blue-600" />
-            <span className="truncate">Fonts</span>
-            {isFontCustomized && (
-              <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
-            )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setFontModalOpen(true)}
+              className={`w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors border ${
+                isFontCustomized
+                  ? "bg-[#0F172A] text-white border-[#0F172A] shadow-xs"
+                  : "bg-[#F8FAFC] text-[#334155] border-[#E2E8F0] hover:bg-[#F1F5F9]"
+              }`}
+              title="Adjust font size for each text category on the invoice"
+            >
+              <Type className="w-3.5 h-3.5 shrink-0 text-blue-600" />
+              <span>Fonts</span>
+              {isFontCustomized && (
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+              )}
+            </button>
+          </div>
 
-          <ExportMenu
-            invoice={invoice}
-            elementId="invoice-preview-document"
-            className="w-full sm:w-auto"
-            buttonClassName="w-full sm:w-auto inline-flex items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none"
-          />
+          <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 w-full sm:w-auto">
+            <ExportMenu
+              invoice={invoice}
+              elementId="invoice-preview-document"
+              className="w-full sm:w-auto"
+              buttonClassName="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#4468E8] hover:bg-[#3455D1] rounded-lg shadow-sm transition-all focus:outline-none"
+            />
 
-          <button
-            type="button"
-            onClick={() => handleSaveInvoice("sent")}
-            disabled={isSaving}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-1 px-2 sm:px-2.5 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
-          >
-            <Save className="w-3.5 h-3.5 shrink-0" />
-            <span className="truncate">{isSaving ? "Saving..." : "Save"}</span>
-          </button>
+            <button
+              type="button"
+              onClick={() => handleSaveInvoice("sent")}
+              disabled={isSaving}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium text-white bg-[#202124] hover:bg-black rounded-lg shadow-sm transition-all disabled:opacity-50"
+            >
+              <Save className="w-3.5 h-3.5 shrink-0" />
+              <span>{isSaving ? "Saving..." : "Save"}</span>
+            </button>
+          </div>
         </div>
       </div>
 
