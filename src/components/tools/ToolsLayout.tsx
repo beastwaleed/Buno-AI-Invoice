@@ -23,6 +23,8 @@ interface ToolsLayoutProps {
   title: string;
   subtitle: string;
   activeTool?: "merge" | "unlock" | "edit" | "image" | "hub";
+  wide?: boolean;
+  hideHeader?: boolean;
 }
 
 export const PDF_TOOLS = [
@@ -65,6 +67,8 @@ export const ToolsLayout: React.FC<ToolsLayoutProps> = ({
   title,
   subtitle,
   activeTool,
+  wide = false,
+  hideHeader = false,
 }) => {
   const pathname = usePathname();
 
@@ -155,21 +159,29 @@ export const ToolsLayout: React.FC<ToolsLayoutProps> = ({
       </header>
 
       {/* Main Tool Container */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6">
+      <main
+        className={`flex-1 w-full mx-auto ${
+          wide
+            ? "max-w-[1600px] px-2 sm:px-4 lg:px-6 py-3 sm:py-4 space-y-4"
+            : "max-w-5xl px-4 sm:px-6 py-6 sm:py-10 space-y-6"
+        }`}
+      >
         {/* Title Header with Security Badges */}
-        <div className="text-center space-y-2 max-w-2xl mx-auto">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-[11px] font-medium shadow-2xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>100% Client-Side • Private & Secure • No Sign-Up Needed</span>
-          </div>
+        {!hideHeader && (
+          <div className="text-center space-y-2 max-w-2xl mx-auto">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/60 text-emerald-800 text-[11px] font-medium shadow-2xs">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>100% Client-Side • Private & Secure • No Sign-Up Needed</span>
+            </div>
 
-          <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#202124] tracking-tight">
-            {title}
-          </h1>
-          <p className="text-xs sm:text-sm text-[#70757A] leading-relaxed">
-            {subtitle}
-          </p>
-        </div>
+            <h1 className="font-serif font-bold text-2xl sm:text-3xl text-[#202124] tracking-tight">
+              {title}
+            </h1>
+            <p className="text-xs sm:text-sm text-[#70757A] leading-relaxed">
+              {subtitle}
+            </p>
+          </div>
+        )}
 
         {/* Tool Content Rendered Here */}
         {children}
